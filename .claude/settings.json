@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(flutter build *)",
+      "Bash(firebase apps:android:sha:create 1:52976967147:android:028d2cf32a270777098dae BE:98:E9:58:1E:AD:B9:DE:75:04:D4:84:D8:89:7E:55:C5:92:EC:15 --project yolyoldase)",
+      "Bash(firebase apps:sdkconfig ANDROID 1:52976967147:android:028d2cf32a270777098dae --out android/app/google-services.json)",
+      "Bash(dart format *)",
+      "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/go_router-17.5.0; grep -rn \"TickerMode\" \"$P/lib\" | head -10)",
+      "Read(//Users/rashadaliyev/.pub-cache/hosted/pub.dev/go_router-17.5.0/lib/**)",
+      "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/go_router-17.5.0; sed -n '1620,1645p' \"$P/lib/src/route.dart\")",
+      "Read(//Users/rashadaliyev/.pub-cache/hosted/pub.dev/go_router-17.5.0/lib/src/**)",
+      "Bash(keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab)",
+      "Bash(unzip -p build/app/outputs/bundle/release/app-release.aab BUNDLE-METADATA/com.android.tools.build.gradle/app-metadata.properties)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:pusher.com)",
+      "WebFetch(domain:onesignal.com)",
+      "Bash(curl -s --max-time 25 \"https://pub.dev/api/packages/firebase_core\")",
+      "Bash(python3 -c \"import json,sys;d=json.load\\(sys.stdin\\);print\\('firebase_core latest',d['latest']['version'],d['latest']['pubspec'].get\\('environment'\\)\\)\")",
+      "Bash(curl -s --max-time 25 \"https://pub.dev/api/packages/flutter_local_notifications\")",
+      "Bash(python3 -c \"import json,sys;d=json.load\\(sys.stdin\\);print\\('fln latest',d['latest']['version'],d['latest']['pubspec'].get\\('environment'\\)\\);print\\('deps',d['latest']['pubspec'].get\\('dependencies'\\)\\)\")",
+      "Bash(curl -s --max-time 25 \"https://repo.packagist.org/p2/laravel-notification-channels/fcm.json\")",
+      "Bash(curl -s --max-time 25 \"https://repo.packagist.org/p2/kreait/laravel-firebase.json\")",
+      "WebFetch(domain:documentation.onesignal.com)",
+      "Bash(curl -s -m 15 \"https://pub.dev/api/packages/flutter_local_notifications\")",
+      "Bash(curl -s -m 15 \"https://pub.dev/api/packages/workmanager\")",
+      "Bash(curl -s -m 15 \"https://raw.githubusercontent.com/MaikuB/flutter_local_notifications/master/flutter_local_notifications/CHANGELOG.md\")",
+      "WebFetch(domain:firebase.google.com)",
+      "WebFetch(domain:firebase.blog)",
+      "Bash(curl -s -m 15 \"https://raw.githubusercontent.com/fluttercommunity/flutter_workmanager/main/workmanager/CHANGELOG.md\")",
+      "Bash(curl -s -m 15 \"https://raw.githubusercontent.com/fluttercommunity/flutter_workmanager/main/workmanager/README.md\")",
+      "Bash(curl -s -m 20 \"https://pub.dev/api/packages/firebase_messaging\")",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('firebase_messaging latest:',d['latest']['version'],d['latest']['published']\\);print\\('sdk:',d['latest']['pubspec'].get\\('environment'\\)\\)\")",
+      "Bash(curl -s -m 20 \"https://pub.dev/api/packages/flutter_local_notifications\")",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('fln latest:',d['latest']['version'],d['latest']['published']\\);print\\('env:',d['latest']['pubspec'].get\\('environment'\\)\\)\")",
+      "Bash(curl -s -m 20 \"https://pub.dev/api/packages/firebase_core\")",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('firebase_core latest:',d['latest']['version'],d['latest']['published']\\)\")"
+    ]
+  }
+}
