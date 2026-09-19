@@ -35,6 +35,9 @@ import '../../features/rides/domain/repositories/ride_repository.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
 import '../network/api_client.dart';
+import '../services/push/local_notifications.dart';
+import '../services/push/pending_deep_link.dart';
+import '../services/push/push_service.dart';
 import '../services/token_storage.dart';
 
 /// Builds the object graph once, at boot, and hands the repositories to the
@@ -58,10 +61,24 @@ class AppDependencies {
     required this.reviews,
     required this.notifications,
     required this.reports,
+    required this.push,
+    required this.localNotifications,
+    required this.pendingDeepLink,
   });
 
   final ApiClient apiClient;
   final TokenStorage tokens;
+
+  /// The push transport. [InactivePushService] until one is configured — see
+  /// `core/services/push/push_service.dart`.
+  final PushService push;
+
+  /// Draws notifications and owns the Android channels. Live regardless of
+  /// whether a transport is wired.
+  final LocalNotifications localNotifications;
+
+  /// Parks a notification tap until the session is ready to route it.
+  final PendingDeepLink pendingDeepLink;
 
   final SettingsRepository settings;
   final AuthRepository auth;
@@ -83,6 +100,8 @@ class AppDependencies {
     required SharedPreferences preferences,
     ApiClient? apiClient,
     TokenStorage? tokenStorage,
+    PushService? push,
+    LocalNotifications? localNotifications,
   }) async {
     final tokens = tokenStorage ?? SecureTokenStorage();
     final client = apiClient ?? ApiClient(tokens: tokens);
@@ -119,8 +138,19 @@ class AppDependencies {
       reviews: ReviewRepositoryImpl(ReviewApiService(client)),
       notifications: NotificationRepositoryImpl(NotificationApiService(client)),
       reports: ReportRepositoryImpl(ReportApiService(client)),
+
+      // No transport is configured yet, so this is the inactive one: the
+      // channels, the permission prompt and the routing are all live, and only
+      // delivery is missing. Swapping in an FCM implementation is the one edit
+      // this line needs.
+      push: push ?? const InactivePushService(),
+      localNotifications: localNotifications ?? LocalNotifications(),
+      pendingDeepLink: PendingDeepLink(),
     );
   }
 
-  Future<void> dispose() => apiClient.close();
+  Future<void> dispose() async {
+    await push.dispose();
+    await apiClient.close();
+  }
 }

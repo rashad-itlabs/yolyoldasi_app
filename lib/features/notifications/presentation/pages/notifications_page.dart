@@ -273,6 +273,12 @@ class _NotificationsView extends StatelessWidget {
         Icons.gpp_bad_rounded,
         palette.danger,
       ),
+      // A type this build does not know. Neutral on purpose: borrowing another
+      // type's icon is how the old fallback misled people.
+      NotificationType.unknown => (
+        Icons.notifications_none_rounded,
+        palette.textTertiary,
+      ),
     };
   }
 }

@@ -349,6 +349,19 @@ const Map<String, String> kStringsEn = {
   'notifReviewRequestTitle': 'Rate your trip',
   'notifDocsApprovedTitle': 'Your documents are approved',
   'notifDocsRejectedTitle': 'Your documents were rejected',
+  'notifUnknownTitle': 'New notification',
+
+  // Android notification channels — these names appear in system settings.
+  'channelMessages': 'Messages',
+  'channelMessagesDesc': 'New messages in your chats',
+  'channelBookings': 'Bookings',
+  'channelBookingsDesc': 'Booking requests, confirmations and cancellations',
+  'channelReminders': 'Trip reminders',
+  'channelRemindersDesc': 'A reminder before departure',
+  'channelMarketing': 'Offers',
+  'channelMarketingDesc': 'Promotions and news',
+  'channelGeneral': 'General',
+  'channelGeneralDesc': 'Account notices and everything else',
 
   // --------------------------------------------------------------- reviews
   'reviews': 'Reviews',

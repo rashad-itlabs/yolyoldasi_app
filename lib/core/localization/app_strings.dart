@@ -375,6 +375,22 @@ class AppStrings {
   String get notifDocsApprovedTitle => _get('notifDocsApprovedTitle');
   String get notifDocsRejectedTitle => _get('notifDocsRejectedTitle');
 
+  /// A `type` this build does not recognise — see [NotificationType.unknown].
+  String get notifUnknownTitle => _get('notifUnknownTitle');
+
+  // Android notification channel names and descriptions. Both are shown in the
+  // OS settings list, so they are user-facing copy, not identifiers.
+  String get channelMessages => _get('channelMessages');
+  String get channelMessagesDesc => _get('channelMessagesDesc');
+  String get channelBookings => _get('channelBookings');
+  String get channelBookingsDesc => _get('channelBookingsDesc');
+  String get channelReminders => _get('channelReminders');
+  String get channelRemindersDesc => _get('channelRemindersDesc');
+  String get channelMarketing => _get('channelMarketing');
+  String get channelMarketingDesc => _get('channelMarketingDesc');
+  String get channelGeneral => _get('channelGeneral');
+  String get channelGeneralDesc => _get('channelGeneralDesc');
+
   // --------------------------------------------------------------- reviews
   String get reviews => _get('reviews');
   String get rateTrip => _get('rateTrip');

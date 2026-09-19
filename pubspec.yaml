@@ -59,9 +59,19 @@ dependencies:
   flutter_animate: ^4.5.2
   shimmer: ^3.0.0
 
-  # No Firebase. `POST /auth/firebase` needs an ID token this app can no longer
-  # produce, so sign-in currently takes a Sanctum token directly — see
+  # Notification channels, the Android 13 permission prompt, and drawing the
+  # notification while the app is in the foreground — which FCM does not do.
+  # Independent of any push transport: it renders, it does not deliver.
+  flutter_local_notifications: ^22.3.1
+
+  # No Firebase **Auth**. `POST /auth/firebase` needs an ID token this app can
+  # no longer produce, so sign-in takes a Sanctum token directly — see
   # `features/auth/`. An SMS provider will replace that later.
+  #
+  # This is not a ban on FCM: API.md §5 and §13 are written around it, and
+  # `core/services/push/` is the seam a transport plugs into. Adding
+  # `firebase_messaging` needs `google-services.json` (Android) and
+  # `GoogleService-Info.plist` + an APNs key (iOS) first, or the build breaks.
 
 dev_dependencies:
   flutter_test:

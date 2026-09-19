@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 // The enum values in API.md §2.
 //
 // The server matches on these strings exactly, and several of them are
@@ -101,6 +103,17 @@ enum DevicePlatform {
   ios;
 
   String get apiValue => name;
+
+  /// The platform this build is running on, as `POST /me/device-tokens` wants
+  /// it (API.md §5).
+  ///
+  /// `defaultTargetPlatform` rather than `dart:io`, so the value is still
+  /// readable in a widget test — and so this file does not pull in `dart:io`,
+  /// which would stop it compiling for web.
+  static DevicePlatform get current =>
+      defaultTargetPlatform == TargetPlatform.iOS
+      ? DevicePlatform.ios
+      : DevicePlatform.android;
 }
 
 /// The languages the API accepts for `language_code`.

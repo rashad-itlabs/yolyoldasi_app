@@ -348,6 +348,19 @@ const Map<String, String> kStringsRu = {
   'notifReviewRequestTitle': 'Оцените поездку',
   'notifDocsApprovedTitle': 'Документы подтверждены',
   'notifDocsRejectedTitle': 'Документы отклонены',
+  'notifUnknownTitle': 'Новое уведомление',
+
+  // Каналы уведомлений Android — под этими именами они видны в настройках.
+  'channelMessages': 'Сообщения',
+  'channelMessagesDesc': 'Новые сообщения в чатах',
+  'channelBookings': 'Брони',
+  'channelBookingsDesc': 'Запросы, подтверждения и отмены броней',
+  'channelReminders': 'Напоминания о поездке',
+  'channelRemindersDesc': 'Напоминание перед отправлением',
+  'channelMarketing': 'Акции',
+  'channelMarketingDesc': 'Скидки и новости',
+  'channelGeneral': 'Общие',
+  'channelGeneralDesc': 'Уведомления аккаунта и прочее',
 
   // --------------------------------------------------------------- reviews
   'reviews': 'Отзывы',

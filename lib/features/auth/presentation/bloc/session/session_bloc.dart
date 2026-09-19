@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../../core/error/failure.dart';
 import '../../../../../core/error/result.dart';
+import '../../../../../core/services/push/push_service.dart';
 import '../../../../profile/domain/entities/app_user.dart';
 import '../../../../profile/domain/entities/user_enums.dart';
 import '../../../../profile/domain/repositories/user_repository.dart';
@@ -25,9 +26,11 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     required AuthRepository auth,
     required UserRepository users,
     required SettingsRepository settings,
+    PushService push = const InactivePushService(),
   }) : _auth = auth,
        _users = users,
        _settings = settings,
+       _push = push,
        super(const SessionState()) {
     on<SessionStarted>(_onStarted);
     on<SessionSignedIn>(_onSignedIn);
@@ -48,6 +51,11 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final AuthRepository _auth;
   final UserRepository _users;
   final SettingsRepository _settings;
+
+  /// Only ever asked for [PushService.currentToken] and told to forget it.
+  /// Defaults to the inactive transport so a test — or a build with no push
+  /// configured — needs no extra wiring.
+  final PushService _push;
 
   late final StreamSubscription<void> _expirySubscription;
 
@@ -204,9 +212,15 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   ) async {
     emit(state.copyWith(isWorking: true, failure: () => null));
 
+    // API.md §5: the device token must be released BEFORE the session goes, or
+    // this phone keeps receiving the previous account's notifications. The
+    // repository takes it as an argument and does nothing without one — which
+    // is exactly what used to happen here, so the unregister never ran.
+    await _auth.logout(deviceToken: _push.currentToken);
+    await _push.clear();
+
     // The repository clears the local session whatever the API says — a failed
     // logout must never strand the user inside an account they asked to leave.
-    await _auth.logout();
     await _settings.clearForSignOut();
     emit(state.signedOut());
   }
@@ -217,9 +231,10 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   ) async {
     emit(state.copyWith(isWorking: true, failure: () => null));
 
-    final result = await _auth.deleteAccount();
+    final result = await _auth.deleteAccount(deviceToken: _push.currentToken);
     switch (result) {
       case Ok():
+        await _push.clear();
         await _settings.clearForSignOut();
         emit(state.signedOut());
       case Err(:final failure):

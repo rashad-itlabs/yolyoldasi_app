@@ -15,9 +15,20 @@ enum NotificationType {
   newMessage,
   reviewRequest,
   documentsApproved,
-  documentsRejected;
+  documentsRejected,
+
+  /// A wire value this build does not know — a newer server, or a typo.
+  ///
+  /// Explicit rather than folded into a real type. The previous fallback
+  /// answered every unrecognised value with `bookingRequested`, so a renamed
+  /// or mistyped type rendered a chat message as a booking request and routed
+  /// the tap to the wrong screen, silently. A type the app cannot place is now
+  /// something it can say out loud.
+  unknown;
 
   String get apiValue => name;
+
+  bool get isKnown => this != NotificationType.unknown;
 
   /// Localization key for the notification title.
   String get titleKey => switch (this) {
@@ -31,12 +42,13 @@ enum NotificationType {
     NotificationType.reviewRequest => 'notifReviewRequestTitle',
     NotificationType.documentsApproved => 'notifDocsApprovedTitle',
     NotificationType.documentsRejected => 'notifDocsRejectedTitle',
+    NotificationType.unknown => 'notifUnknownTitle',
   };
 
   static NotificationType fromApi(String? value) =>
       NotificationType.values.firstWhere(
         (t) => t.apiValue == value,
-        orElse: () => NotificationType.bookingRequested,
+        orElse: () => NotificationType.unknown,
       );
 }
 

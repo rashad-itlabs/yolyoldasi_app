@@ -1,8 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../core/di/app_dependencies.dart';
+import '../core/extensions/context_extensions.dart';
+import '../core/services/push/local_notifications.dart';
+import '../core/services/push/pending_deep_link.dart';
+import '../core/services/push/push_message.dart';
+import '../core/services/push/push_service.dart';
+import '../core/widgets/app_feedback.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/cities/presentation/bloc/cities_bloc.dart';
+import '../features/notifications/domain/entities/app_notification.dart';
+import '../features/profile/domain/entities/user_enums.dart';
+import '../features/profile/domain/repositories/user_repository.dart';
 import '../features/profile/presentation/bloc/driver_profile/driver_profile_bloc.dart';
 import '../features/settings/presentation/bloc/settings/settings_bloc.dart';
 import '../features/shell/presentation/bloc/badges/badges_bloc.dart';
@@ -10,9 +23,9 @@ import '../features/shell/presentation/bloc/badges/badges_bloc.dart';
 /// The cross-cutting reactions that have no screen of their own.
 ///
 /// Signing in has to do several things at once — read the driver profile, load
-/// the badges, adopt the account's language — and none of them belong to a
-/// page. Putting them here keeps every screen free of startup bookkeeping, and
-/// keeps the order in one readable place.
+/// the badges, adopt the account's language, register for push — and none of
+/// them belong to a page. Putting them here keeps every screen free of startup
+/// bookkeeping, and keeps the order in one readable place.
 class AppStartup extends StatefulWidget {
   const AppStartup({super.key, required this.child});
 
@@ -23,14 +36,48 @@ class AppStartup extends StatefulWidget {
 }
 
 class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
+  late final AppDependencies _dependencies;
+  late final PushService _push;
+  late final LocalNotifications _notifications;
+  late final PendingDeepLink _pending;
+
+  StreamSubscription<String>? _tokenSubscription;
+  StreamSubscription<PushMessage>? _tapSubscription;
+  StreamSubscription<PushMessage>? _foregroundSubscription;
+
+  /// Set once the channels exist and permission has been settled, so a second
+  /// sign-in on the same launch does not prompt again.
+  bool _pushStarted = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _dependencies = context.read<AppDependencies>();
+    _push = _dependencies.push;
+    _notifications = _dependencies.localNotifications;
+    _pending = _dependencies.pendingDeepLink;
+
+    // A tap on a notification this app drew itself, rather than one the OS
+    // drew. Both routes end in the same place.
+    _notifications.onTap = _onPushTapped;
+
+    _tapSubscription = _push.taps.listen(_onPushTapped);
+    _foregroundSubscription = _push.foregroundMessages.listen(_onForeground);
+
+    // Rotation is not an edge case: a restore, a reinstall or a data clear all
+    // mint a new token, and the server keeps sending to the old one until it
+    // is told otherwise.
+    _tokenSubscription = _push.tokenChanges.listen(_registerToken);
   }
 
   @override
   void dispose() {
+    _notifications.onTap = null;
+    _tokenSubscription?.cancel();
+    _tapSubscription?.cancel();
+    _foregroundSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -39,8 +86,9 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
 
-    // Coming back from the background is the one moment the client knows its
-    // data may be stale, and there is no push channel to tell it otherwise.
+    // Coming back from the background is when the client knows its data may be
+    // stale. It is also the only recovery path for a device that was
+    // force-stopped, where no push can arrive at all until the user returns.
     final session = context.read<SessionBloc>();
     if (!session.state.isSignedIn) return;
     session.add(const SessionRefreshed());
@@ -60,6 +108,11 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
             _onSignedIn(context, state);
           case SessionStatus.signedOut:
             context.read<BadgesBloc>().add(const BadgesCleared());
+            // The token is released by SessionBloc; this clears what is already
+            // on screen, so the next account never inherits the previous one's
+            // tray.
+            _pending.clear();
+            unawaited(_notifications.cancelAll());
           case SessionStatus.booting || SessionStatus.blocked:
             break;
         }
@@ -84,5 +137,108 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     if (languageCode != null) {
       context.read<SettingsBloc>().add(SettingsLanguageSynced(languageCode));
     }
+
+    unawaited(_startPush());
+
+    // A tap that cold-started the app has been waiting for exactly this: the
+    // router rewrites every location to /splash while the session is booting,
+    // so navigating any earlier would land the user on the splash screen.
+    if (state.status == SessionStatus.ready) _drainPendingLink();
+  }
+
+  /// Creates the channels, asks for permission, and registers the token.
+  ///
+  /// Ordered deliberately. The channels exist before anything can be posted to
+  /// them; permission is settled before a token is asked for, because on iOS
+  /// APNs issues none without it; and the token reaches the API last, so the
+  /// server never holds a token for a device that cannot show anything.
+  Future<void> _startPush() async {
+    if (!_pushStarted) {
+      _pushStarted = true;
+      if (!mounted) return;
+      await _notifications.initialize(context.l10n);
+      await _notifications.requestPermission();
+    }
+
+    final granted = await _push.start();
+    if (!granted) return;
+
+    final token = _push.currentToken;
+    if (token != null) await _registerToken(token);
+  }
+
+  /// `POST /me/device-tokens` — API.md §5 does `updateOrCreate`, so re-sending
+  /// the same token on every launch is both safe and the documented usage.
+  Future<void> _registerToken(String token) async {
+    if (!mounted) return;
+    final users = context.read<UserRepository>();
+    await users.registerDeviceToken(
+      token: token,
+      platform: DevicePlatform.current,
+    );
+  }
+
+  /// A push that arrived while the app was on screen.
+  ///
+  /// FCM draws nothing on Android while the app is foreground, and iOS needs
+  /// telling — so this is the one state where the notification is the app's own
+  /// responsibility.
+  void _onForeground(PushMessage message) {
+    if (!mounted) return;
+
+    // Already reading that thread: the message is about to appear in the list
+    // on its own. A banner over it would be noise.
+    if (_pending.isOpen(message.conversationId)) return;
+
+    // The badge is cheaper to adjust than to re-read, and the counter is what
+    // the user sees first.
+    if (message.type == NotificationType.newMessage) {
+      context.read<BadgesBloc>().add(const MessageBadgeAdjusted(1));
+    } else {
+      context.read<BadgesBloc>().add(const NotificationBadgeAdjusted(1));
+    }
+
+    // The server's wording is in whatever language it guessed. The app has the
+    // same lines in az/ru/en and knows which one this user reads, so the type
+    // line is localized here and only free text is taken from the push.
+    final typeLine = context.l10n.byKey(message.type.titleKey);
+    final title = message.title ?? message.actorName ?? typeLine;
+
+    // Never the same string twice: with no body and no sender, the type line is
+    // the title and the body stays empty.
+    final body = message.body ?? (message.actorName == null ? '' : typeLine);
+
+    unawaited(_notifications.show(message, title: title, body: body));
+  }
+
+  void _onPushTapped(PushMessage message) {
+    _pending.offer(message);
+
+    if (!mounted) return;
+    final session = context.read<SessionBloc>();
+
+    // A tap on a locked or booting app waits; there is nowhere to land yet.
+    if (session.state.status != SessionStatus.ready) return;
+    _drainPendingLink();
+  }
+
+  void _drainPendingLink() {
+    final message = _pending.take();
+    if (message == null) return;
+    if (!mounted) return;
+
+    // Opening the thread means the tray entry for it is stale.
+    unawaited(_notifications.cancelFor(message));
+
+    final route = PendingDeepLink.routeFor(message);
+    if (route == null) {
+      // API.md §13: every id can be null at once when the subject has been
+      // deleted. Saying so beats opening a blank screen.
+      AppFeedback.error(context, context.l10n.linkUnavailableBody);
+      return;
+    }
+
+    context.push(route);
+    context.read<BadgesBloc>().add(const BadgesRefreshed());
   }
 }

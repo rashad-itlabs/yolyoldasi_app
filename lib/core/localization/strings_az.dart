@@ -348,6 +348,19 @@ const Map<String, String> kStringsAz = {
   'notifReviewRequestTitle': 'Səfəri qiymətləndirin',
   'notifDocsApprovedTitle': 'Sənədləriniz təsdiqləndi',
   'notifDocsRejectedTitle': 'Sənədləriniz rədd edildi',
+  'notifUnknownTitle': 'Yeni bildiriş',
+
+  // Android bildiriş kanalları — sistem parametrlərində bu adlarla görünür.
+  'channelMessages': 'Mesajlar',
+  'channelMessagesDesc': 'Söhbətlərdə yeni mesajlar',
+  'channelBookings': 'Bronlar',
+  'channelBookingsDesc': 'Bron sorğuları, təsdiqlər və ləğvlər',
+  'channelReminders': 'Səfər xatırlatmaları',
+  'channelRemindersDesc': 'Yola düşməzdən əvvəl xatırlatma',
+  'channelMarketing': 'Kampaniyalar',
+  'channelMarketingDesc': 'Endirimlər və yeniliklər',
+  'channelGeneral': 'Ümumi',
+  'channelGeneralDesc': 'Hesab bildirişləri və digərləri',
 
   // --------------------------------------------------------------- reviews
   'reviews': 'Rəylər',

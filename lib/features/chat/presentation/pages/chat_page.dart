@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/di/app_dependencies.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/push/pending_deep_link.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/widgets/app_avatar.dart';
@@ -21,17 +23,43 @@ import '../bloc/chat/chat_bloc.dart';
 ///
 /// The API has no realtime transport, so [ChatBloc] re-reads the thread on a
 /// timer while this screen is open.
-class ChatPage extends StatelessWidget {
+class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.conversationId});
 
   final int conversationId;
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  PendingDeepLink? _deepLink;
+
+  @override
+  void initState() {
+    super.initState();
+    // Marks this thread as the one on screen, so a push for it draws no banner
+    // over the message the user is already watching arrive. Cleared in
+    // [dispose] — including when the screen is popped by a deep link into a
+    // different thread.
+    _deepLink = context.read<AppDependencies>().pendingDeepLink
+      ..openConversationId = widget.conversationId;
+  }
+
+  @override
+  void dispose() {
+    if (_deepLink?.openConversationId == widget.conversationId) {
+      _deepLink?.openConversationId = null;
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ChatBloc>(
       create: (context) => ChatBloc(
         chat: context.read<ChatRepository>(),
-        conversationId: conversationId,
+        conversationId: widget.conversationId,
       )..add(const ChatStarted()),
       child: const _ChatView(),
     );

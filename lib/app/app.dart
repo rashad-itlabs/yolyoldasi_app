@@ -62,6 +62,9 @@ class YolYoldasiApp extends StatelessWidget {
               auth: dependencies.auth,
               users: dependencies.users,
               settings: dependencies.settings,
+              // Read for its registration token at sign-out, so the device
+              // stops receiving this account's notifications (API.md §5).
+              push: dependencies.push,
             )..add(const SessionStarted()),
           ),
           BlocProvider<PhoneSignInBloc>(
