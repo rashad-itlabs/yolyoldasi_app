@@ -62,7 +62,7 @@ dependencies:
   # Notification channels, the Android 13 permission prompt, and drawing the
   # notification while the app is in the foreground — which FCM does not do.
   # Independent of any push transport: it renders, it does not deliver.
-  flutter_local_notifications: ^22.3.1
+  flutter_local_notifications: ^19.4.2
 
   # No Firebase **Auth**. `POST /auth/firebase` needs an ID token this app can
   # no longer produce, so sign-in takes a Sanctum token directly — see

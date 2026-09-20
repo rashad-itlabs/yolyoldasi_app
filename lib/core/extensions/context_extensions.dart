@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../localization/app_localizations.dart';
 import '../theme/app_colors.dart';
+import '../theme/layout_size.dart';
 import '../utils/app_format.dart';
 
 /// Shorthands used across every widget in the app.
@@ -35,11 +36,27 @@ extension BuildContextX on BuildContext {
   double get keyboardHeight => MediaQuery.viewInsetsOf(this).bottom;
   bool get isKeyboardOpen => keyboardHeight > 0;
 
-  /// Layout breakpoints. Phones stay single column; the admin panel and
-  /// tablets get the wide treatment.
-  bool get isCompact => screenWidth < 600;
-  bool get isMedium => screenWidth >= 600 && screenWidth < 1024;
-  bool get isExpanded => screenWidth >= 1024;
+  /// How much room this screen has — see [LayoutSize].
+  ///
+  /// Measured on the shortest side, so a phone held sideways stays compact
+  /// rather than being mistaken for a tablet.
+  LayoutSize get layout => LayoutSize.of(this);
+
+  bool get isCompact => layout.isCompact;
+  bool get isTablet => layout.isTablet;
+
+  /// Widest the content column gets here, and the padding around it.
+  double get contentMaxWidth => layout.contentWidth;
+  double get pagePadding => layout.pagePadding;
+
+  /// Extra side padding that pulls a full-bleed page into the content column.
+  ///
+  /// Zero on a phone. For a screen that paints edge to edge on purpose — a
+  /// gradient header, a hero image — adding this to the horizontal padding
+  /// keeps the backdrop full width while the text and cards on top of it line
+  /// up with the column every other screen uses.
+  double get columnInset =>
+      ((screenWidth - contentMaxWidth) / 2).clamp(0.0, double.infinity);
 
   /// Dismisses the keyboard without unfocusing programmatic focus traps.
   void hideKeyboard() => FocusScope.of(this).unfocus();

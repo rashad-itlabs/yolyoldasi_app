@@ -59,7 +59,7 @@ class LocalNotifications {
     );
 
     await _plugin.initialize(
-      settings: const InitializationSettings(android: android, iOS: darwin),
+      const InitializationSettings(android: android, iOS: darwin),
       onDidReceiveNotificationResponse: _onResponse,
     );
 
@@ -168,17 +168,17 @@ class LocalNotifications {
     );
 
     await _plugin.show(
-      id: message.collapseId,
-      title: title,
-      body: body,
-      notificationDetails: details,
+      message.collapseId,
+      title,
+      body,
+      details,
       payload: jsonEncode(message.toData()),
     );
   }
 
   /// Clears the tray entry for a thread the user has just read.
   Future<void> cancelFor(PushMessage message) =>
-      _plugin.cancel(id: message.collapseId, tag: message.collapseKey);
+      _plugin.cancel(message.collapseId, tag: message.collapseKey);
 
   /// Clears every notification this app has posted — used on sign-out, so the
   /// next account never sees the previous one's tray.

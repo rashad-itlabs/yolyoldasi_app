@@ -129,7 +129,8 @@
       "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1; grep -rn \"identifier\" $P/ios/flutter_local_notifications/Sources/flutter_local_notifications/FlutterLocalNotificationsPlugin.m 2>/dev/null | head -40; ls $P/ios)",
       "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/ios/flutter_local_notifications/Sources/flutter_local_notifications/FlutterLocalNotificationsPlugin.m; sed -n '630,700p' $P)",
       "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/lib/src/flutter_local_notifications_plugin.dart; sed -n '335,365p' $P)",
-      "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/ios/flutter_local_notifications/Sources/flutter_local_notifications/FlutterLocalNotificationsPlugin.m; sed -n '985,1000p' $P)"
+      "Bash(P=/Users/rashadaliyev/.pub-cache/hosted/pub.dev/flutter_local_notifications-22.3.1/ios/flutter_local_notifications/Sources/flutter_local_notifications/FlutterLocalNotificationsPlugin.m; sed -n '985,1000p' $P)",
+      "Bash(plutil -p ios/Runner/Info.plist)"
     ]
   }
 }

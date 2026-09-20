@@ -18,59 +18,93 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      body: navigationShell,
+      // Four destinations spread across a 13-inch screen end up so far apart
+      // that the bar stops reading as one control, so they are held to the
+      // same column width as the content above them.
+      //
+      // The surface still spans the screen: a bar that stops short of the
+      // edges reads as a floating panel, and on iOS it would leave the home
+      // indicator sitting on the page background rather than on the bar.
+      // Same colour the NavigationBar paints itself (app_theme.dart:338), so
+      // the strip beside it reads as the same surface rather than as page
+      // background showing through.
+      bottomNavigationBar: ColoredBox(
+        color: context.palette.surfaceElevated,
+        child: Align(
+          // `heightFactor: 1` is load-bearing: without it the Align takes every
+          // pixel of height the Scaffold offers, the bar floats in the middle
+          // of the screen and the body is squeezed to nothing.
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: context.contentMaxWidth),
+            child: _NavigationBar(navigationShell: navigationShell),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigationBar extends StatelessWidget {
+  const _NavigationBar({required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isDriver = context.select<SessionBloc, bool>(
       (bloc) => bloc.state.isDriverMode,
     );
     final badges = context.watch<BadgesBloc>().state;
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            // Tapping the active tab pops it back to its root.
-            initialLocation: index == navigationShell.currentIndex,
-          );
-          // The counts have no push channel yet (API.md §13), so moving
-          // between tabs is the app's best cue to re-read them.
-          context.read<BadgesBloc>().add(const BadgesRefreshed());
-        },
-        destinations: [
-          NavigationDestination(
-            icon: Icon(
-              isDriver ? Icons.directions_car_outlined : Icons.search_rounded,
-            ),
-            selectedIcon: Icon(
-              isDriver ? Icons.directions_car_filled : Icons.search_rounded,
-            ),
-            label: isDriver ? l10n.navRides : l10n.navSearch,
+    return NavigationBar(
+      selectedIndex: navigationShell.currentIndex,
+      onDestinationSelected: (index) {
+        navigationShell.goBranch(
+          index,
+          // Tapping the active tab pops it back to its root.
+          initialLocation: index == navigationShell.currentIndex,
+        );
+        // The counts have no push channel yet (API.md §13), so moving
+        // between tabs is the app's best cue to re-read them.
+        context.read<BadgesBloc>().add(const BadgesRefreshed());
+      },
+      destinations: [
+        NavigationDestination(
+          icon: Icon(
+            isDriver ? Icons.directions_car_outlined : Icons.search_rounded,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.confirmation_number_outlined),
-            selectedIcon: const Icon(Icons.confirmation_number),
-            label: isDriver ? l10n.navRequests : l10n.navBookings,
+          selectedIcon: Icon(
+            isDriver ? Icons.directions_car_filled : Icons.search_rounded,
           ),
-          NavigationDestination(
-            icon: _Badged(
-              label: badges.messageBadge,
-              child: const Icon(Icons.chat_bubble_outline_rounded),
-            ),
-            selectedIcon: _Badged(
-              label: badges.messageBadge,
-              child: const Icon(Icons.chat_bubble_rounded),
-            ),
-            label: l10n.navChat,
+          label: isDriver ? l10n.navRides : l10n.navSearch,
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.confirmation_number_outlined),
+          selectedIcon: const Icon(Icons.confirmation_number),
+          label: isDriver ? l10n.navRequests : l10n.navBookings,
+        ),
+        NavigationDestination(
+          icon: _Badged(
+            label: badges.messageBadge,
+            child: const Icon(Icons.chat_bubble_outline_rounded),
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
-            label: l10n.navProfile,
+          selectedIcon: _Badged(
+            label: badges.messageBadge,
+            child: const Icon(Icons.chat_bubble_rounded),
           ),
-        ],
-      ),
+          label: l10n.navChat,
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.person_outline_rounded),
+          selectedIcon: const Icon(Icons.person_rounded),
+          label: l10n.navProfile,
+        ),
+      ],
     );
   }
 }

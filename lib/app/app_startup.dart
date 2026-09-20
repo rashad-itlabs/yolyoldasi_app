@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/di/app_dependencies.dart';
 import '../core/extensions/context_extensions.dart';
+import '../core/services/push/foreground_message_watcher.dart';
 import '../core/services/push/local_notifications.dart';
 import '../core/services/push/pending_deep_link.dart';
 import '../core/services/push/push_message.dart';
@@ -40,10 +41,12 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   late final PushService _push;
   late final LocalNotifications _notifications;
   late final PendingDeepLink _pending;
+  late final ForegroundMessageWatcher _watcher;
 
   StreamSubscription<String>? _tokenSubscription;
   StreamSubscription<PushMessage>? _tapSubscription;
   StreamSubscription<PushMessage>? _foregroundSubscription;
+  StreamSubscription<PushMessage>? _watcherSubscription;
 
   /// Set once the channels exist and permission has been settled, so a second
   /// sign-in on the same launch does not prompt again.
@@ -58,13 +61,20 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     _push = _dependencies.push;
     _notifications = _dependencies.localNotifications;
     _pending = _dependencies.pendingDeepLink;
+    _watcher = _dependencies.foregroundMessages;
 
     // A tap on a notification this app drew itself, rather than one the OS
     // drew. Both routes end in the same place.
     _notifications.onTap = _onPushTapped;
 
     _tapSubscription = _push.taps.listen(_onPushTapped);
+
+    // Two sources, one handler: a message the transport delivered, and a
+    // message the watcher noticed by asking. They render identically, so the
+    // user cannot tell which one found it — and when a transport is wired,
+    // nothing downstream changes.
     _foregroundSubscription = _push.foregroundMessages.listen(_onForeground);
+    _watcherSubscription = _watcher.messages.listen(_onForeground);
 
     // Rotation is not an edge case: a restore, a reinstall or a data clear all
     // mint a new token, and the server keeps sending to the old one until it
@@ -78,21 +88,34 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     _tokenSubscription?.cancel();
     _tapSubscription?.cancel();
     _foregroundSubscription?.cancel();
+    _watcherSubscription?.cancel();
+    _watcher.pause();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
+    final session = context.read<SessionBloc>();
+
+    if (state != AppLifecycleState.resumed) {
+      // Off screen, Dart stops running anyway — but leaving the timer armed
+      // would fire a burst of catch-up requests the moment the app returns.
+      // The baseline is kept, so returning does not replay what arrived while
+      // away; that backlog belongs to the push transport.
+      _watcher.pause();
+      return;
+    }
 
     // Coming back from the background is when the client knows its data may be
     // stale. It is also the only recovery path for a device that was
     // force-stopped, where no push can arrive at all until the user returns.
-    final session = context.read<SessionBloc>();
     if (!session.state.isSignedIn) return;
     session.add(const SessionRefreshed());
     context.read<BadgesBloc>().add(const BadgesRefreshed());
+
+    final userId = session.state.userId;
+    if (userId != null) _watcher.start(userId: userId);
   }
 
   @override
@@ -112,6 +135,7 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
             // on screen, so the next account never inherits the previous one's
             // tray.
             _pending.clear();
+            _watcher.stop();
             unawaited(_notifications.cancelAll());
           case SessionStatus.booting || SessionStatus.blocked:
             break;
@@ -139,6 +163,11 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     }
 
     unawaited(_startPush());
+
+    // The half that works with no transport at all: while the app is open, a
+    // message for a thread the user is not reading still raises a notification.
+    final userId = state.user?.id;
+    if (userId != null) _watcher.start(userId: userId);
 
     // A tap that cold-started the app has been waiting for exactly this: the
     // router rewrites every location to /splash while the session is booting,

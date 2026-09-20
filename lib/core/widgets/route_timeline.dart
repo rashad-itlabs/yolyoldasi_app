@@ -39,6 +39,18 @@ class RouteTimeline extends StatelessWidget {
     // which case the arrival estimate is simply left out.
     final duration = City.estimatedDrive(fromCity, toCity);
 
+    // The time column is fixed-width so the two city names line up under each
+    // other — but the width has to follow the type, not a constant. At 14pt,
+    // 46pt fits "16:48"; on a tablet, where the theme scales type up, or for a
+    // reader who has turned system text up, the same 46pt splits the clock
+    // across two lines as "16:4 / 8".
+    //
+    // 3.3 ems is that same 46pt expressed in a unit that travels: the digits
+    // are tabular, so the ratio holds at every size.
+    final timeStyle = context.text.titleSmall;
+    final timeWidth =
+        MediaQuery.textScalerOf(context).scale(timeStyle?.fontSize ?? 14) * 3.3;
+
     Widget stop({
       required String time,
       required String city,
@@ -49,10 +61,10 @@ class RouteTimeline extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 46,
+            width: timeWidth,
             child: Text(
               time,
-              style: context.text.titleSmall?.copyWith(
+              style: timeStyle?.copyWith(
                 color: isOrigin ? palette.textPrimary : palette.textSecondary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -118,7 +130,7 @@ class RouteTimeline extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(width: 46 + Gap.md + 5),
+              SizedBox(width: timeWidth + Gap.md + 5),
               SizedBox(
                 width: 1.6,
                 child: CustomPaint(

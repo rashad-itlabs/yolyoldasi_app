@@ -7,6 +7,7 @@ import '../core/di/app_dependencies.dart';
 import '../core/localization/app_localizations.dart';
 import '../core/router/app_router.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/layout_size.dart';
 import '../features/auth/presentation/bloc/phone_sign_in/phone_sign_in_bloc.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/bookings/domain/repositories/booking_repository.dart';
@@ -151,10 +152,14 @@ class _AppViewState extends State<_AppView> {
           locale ?? AppLocalizations.resolve(deviceLocale, supported),
 
       builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        final layout = LayoutSize.fromShortestSide(
+          mediaQuery.size.shortestSide,
+        );
+
         // Clamp text scaling: beyond ~1.3 the dense ride cards start to break,
         // and the app already uses generous type sizes.
-        final mediaQuery = MediaQuery.of(context);
-        return MediaQuery(
+        final scaled = MediaQuery(
           data: mediaQuery.copyWith(
             textScaler: mediaQuery.textScaler.clamp(
               minScaleFactor: 0.85,
@@ -162,6 +167,22 @@ class _AppViewState extends State<_AppView> {
             ),
           ),
           child: child ?? const SizedBox.shrink(),
+        );
+
+        if (layout.isCompact) return scaled;
+
+        // A tablet is held at about the same distance as a phone, so phone-sized
+        // type on a 13-inch screen reads as small. The theme is scaled rather
+        // than the MediaQuery, which leaves the clamp above — and the reader's
+        // own accessibility setting — to apply on top of it.
+        final theme = Theme.of(context);
+        return Theme(
+          data: theme.copyWith(
+            textTheme: theme.textTheme.apply(
+              fontSizeFactor: layout.typeScale,
+            ),
+          ),
+          child: scaled,
         );
       },
     );

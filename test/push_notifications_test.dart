@@ -4,7 +4,11 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yolyoldasi/core/error/failure.dart';
+import 'package:yolyoldasi/core/error/result.dart';
 import 'package:yolyoldasi/core/network/api_client.dart';
+import 'package:yolyoldasi/core/network/api_envelope.dart';
+import 'package:yolyoldasi/core/services/push/foreground_message_watcher.dart';
 import 'package:yolyoldasi/core/services/push/notification_channels.dart';
 import 'package:yolyoldasi/core/services/push/pending_deep_link.dart';
 import 'package:yolyoldasi/core/services/push/push_message.dart';
@@ -13,10 +17,13 @@ import 'package:yolyoldasi/core/services/token_storage.dart';
 import 'package:yolyoldasi/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:yolyoldasi/features/auth/data/services/auth_api_service.dart';
 import 'package:yolyoldasi/features/auth/presentation/bloc/session/session_bloc.dart';
+import 'package:yolyoldasi/features/chat/domain/entities/conversation.dart';
+import 'package:yolyoldasi/features/chat/domain/repositories/chat_repository.dart';
 import 'package:yolyoldasi/features/notifications/domain/entities/app_notification.dart';
 import 'package:yolyoldasi/features/profile/data/repositories/user_repository_impl.dart';
 import 'package:yolyoldasi/features/profile/data/services/device_token_api_service.dart';
 import 'package:yolyoldasi/features/profile/data/services/user_api_service.dart';
+import 'package:yolyoldasi/features/profile/domain/entities/app_user.dart';
 import 'package:yolyoldasi/features/settings/domain/repositories/settings_repository.dart';
 
 /// Push delivery, from the wire payload down to where a tap lands — plus the
@@ -287,6 +294,182 @@ void main() {
     });
   });
 
+  group('a message while the app is open but elsewhere', () {
+    // The half that needs no push transport: the app is running, so it can ask.
+    // Covers "on another screen" only — a backgrounded app runs no timers, and
+    // that is why the locked-phone case needs a transport.
+    late _FakeChatRepository chat;
+    late PendingDeepLink deepLink;
+    late ForegroundMessageWatcher watcher;
+
+    const me = 42;
+    const them = 7;
+
+    late List<PushMessage> seen;
+
+    setUp(() {
+      chat = _FakeChatRepository();
+      deepLink = PendingDeepLink();
+      watcher = ForegroundMessageWatcher(chat: chat, deepLink: deepLink);
+      seen = <PushMessage>[];
+      watcher.messages.listen(seen.add);
+      addTearDown(watcher.dispose);
+    });
+
+    /// One pass, then drained.
+    ///
+    /// The drain is not optional: the watcher publishes on a broadcast stream,
+    /// which delivers in a microtask, so asserting straight after `checkNow()`
+    /// would read an empty list whatever happened — and every "stays quiet"
+    /// expectation below would pass without testing anything.
+    Future<void> tick() async {
+      await watcher.checkNow();
+      await pumpEventQueue();
+    }
+
+    Conversation thread({
+      int id = 14,
+      required DateTime at,
+      int senderId = them,
+      int unread = 1,
+      String text = 'Sabah saat 8-də görüşək?',
+    }) => Conversation(
+      id: id,
+      bookingId: 88,
+      rideId: 7,
+      otherUser: const PublicUser(id: them, fullName: 'Rəşad Məmmədov'),
+      lastMessage: text,
+      lastMessageAt: at,
+      lastSenderId: senderId,
+      unreadCount: unread,
+    );
+
+    test('raises a notification, carrying who and what', () async {
+      final first = DateTime(2026, 9, 19, 20);
+      chat.conversations_ = [thread(at: first)];
+
+      // First pass is the baseline: opening the app must not fire a banner for
+      // every message that arrived while it was closed.
+      watcher.start(userId: me);
+      await pumpEventQueue();
+      expect(seen, isEmpty, reason: 'baseline pass announces nothing');
+
+      chat.conversations_ = [thread(at: first.add(const Duration(minutes: 1)))];
+      await tick();
+
+      expect(seen, hasLength(1));
+      expect(seen.single.type, NotificationType.newMessage);
+      expect(seen.single.conversationId, 14);
+      expect(seen.single.actorName, 'Rəşad Məmmədov');
+      expect(seen.single.body, 'Sabah saat 8-də görüşək?');
+      expect(seen.single.channel, PushChannel.messages);
+    });
+
+    test('stays quiet for the thread the user is reading', () async {
+      final first = DateTime(2026, 9, 19, 20);
+      chat.conversations_ = [thread(at: first)];
+
+      watcher.start(userId: me);
+      await pumpEventQueue();
+
+      // The chat screen sets this while it is on top.
+      deepLink.openConversationId = 14;
+      chat.conversations_ = [thread(at: first.add(const Duration(minutes: 1)))];
+      await tick();
+
+      expect(seen, isEmpty, reason: 'the message is already on screen');
+    });
+
+    test('stays quiet for the user\'s own message', () async {
+      final first = DateTime(2026, 9, 19, 20);
+      chat.conversations_ = [thread(at: first)];
+
+      watcher.start(userId: me);
+      await pumpEventQueue();
+
+      chat.conversations_ = [
+        thread(
+          at: first.add(const Duration(minutes: 1)),
+          senderId: me,
+          unread: 0,
+        ),
+      ];
+      await tick();
+
+      expect(seen, isEmpty, reason: 'your own message is not news');
+    });
+
+    test('stays quiet once the thread is read elsewhere', () async {
+      final first = DateTime(2026, 9, 19, 20);
+      chat.conversations_ = [thread(at: first)];
+
+      watcher.start(userId: me);
+      await pumpEventQueue();
+
+      // Read on another device: newer message, but nothing unread.
+      chat.conversations_ = [
+        thread(at: first.add(const Duration(minutes: 1)), unread: 0),
+      ];
+      await tick();
+
+      expect(seen, isEmpty);
+    });
+
+    test('announces each new message once, not on every tick', () async {
+      final first = DateTime(2026, 9, 19, 20);
+      chat.conversations_ = [thread(at: first)];
+
+      watcher.start(userId: me);
+      await pumpEventQueue();
+
+      chat.conversations_ = [thread(at: first.add(const Duration(minutes: 1)))];
+      await tick();
+      await tick();
+      await tick();
+
+      expect(seen, hasLength(1), reason: 'the timer must not repeat itself');
+    });
+
+    test('a failed read does not become the baseline', () async {
+      // Otherwise the first message after a network blip is written off as
+      // already seen and never announced.
+      chat.fail = true;
+
+      watcher.start(userId: me);
+      await pumpEventQueue();
+
+      chat
+        ..fail = false
+        ..conversations_ = [thread(at: DateTime(2026, 9, 19, 20))];
+      await tick();
+      expect(seen, isEmpty, reason: 'this is the first successful read');
+
+      chat.conversations_ = [thread(at: DateTime(2026, 9, 19, 20, 1))];
+      await tick();
+      expect(seen, hasLength(1));
+    });
+
+    test('signing out clears the baseline for the next account', () async {
+      final first = DateTime(2026, 9, 19, 20);
+      chat.conversations_ = [thread(at: first)];
+
+      watcher.start(userId: me);
+      await pumpEventQueue();
+
+      watcher.stop();
+      expect(watcher.isRunning, isFalse);
+
+      // A different user on the same device starts over, so nothing from the
+      // previous account leaks into a banner.
+      watcher.start(userId: 99);
+      await pumpEventQueue();
+      chat.conversations_ = [thread(at: first.add(const Duration(minutes: 1)))];
+      await tick();
+
+      expect(seen, hasLength(1), reason: 'baseline was rebuilt, not inherited');
+    });
+  });
+
   test('the inactive transport registers nothing', () async {
     // What ships until a transport is configured: the channels, the permission
     // prompt and the routing are all live, and only delivery is missing. A null
@@ -332,6 +515,34 @@ class _FakePushService implements PushService {
 
   @override
   Future<void> dispose() async {}
+}
+
+/// Serves a canned `GET /conversations` page, and can fail on demand.
+class _FakeChatRepository implements ChatRepository {
+  List<Conversation> conversations_ = const [];
+  bool fail = false;
+
+  @override
+  FutureResult<Paginated<Conversation>> conversations({int? page}) async {
+    if (fail) {
+      return const Err(NetworkFailure(debugMessage: 'offline'));
+    }
+    return Ok(Paginated(items: conversations_, meta: PageMeta.single));
+  }
+
+  @override
+  FutureResult<Paginated<ChatMessage>> messages(int id, {int? page}) =>
+      throw UnimplementedError();
+
+  @override
+  FutureResult<ChatMessage> send(int id, String text) =>
+      throw UnimplementedError();
+
+  @override
+  FutureResult<void> markRead(int id) async => const Ok(null);
+
+  @override
+  FutureResult<int> unreadTotal() async => const Ok(0);
 }
 
 class _FakeSettingsRepository implements SettingsRepository {

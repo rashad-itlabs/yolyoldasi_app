@@ -153,10 +153,10 @@ class _SearchHomeViewState extends State<_SearchHomeView> {
               ),
 
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  Gap.page,
+                padding: EdgeInsets.fromLTRB(
+                  Gap.page + context.columnInset,
                   Gap.xxl,
-                  Gap.page,
+                  Gap.page + context.columnInset,
                   0,
                 ),
                 // Publishing belongs to driver mode, and the mode is fixed at
@@ -290,10 +290,14 @@ class _Hero extends StatelessWidget {
           Padding(
             // No status-bar inset here: the pinned [_StatusBarScrim] above
             // this sliver already holds that space open.
-            padding: const EdgeInsets.fromLTRB(
-              Gap.page,
+            //
+            // `columnInset` keeps the gradient full-bleed — which is the point
+            // of the hero — while the greeting and the search card line up with
+            // the column the rest of the app uses.
+            padding: EdgeInsets.fromLTRB(
+              Gap.page + context.columnInset,
               Gap.lg,
-              Gap.page,
+              Gap.page + context.columnInset,
               Gap.xl,
             ),
             child:
@@ -575,7 +579,10 @@ class _RecentSearches extends StatelessWidget {
 class _ActiveRides extends StatelessWidget {
   const _ActiveRides();
 
-  static const EdgeInsets _sides = EdgeInsets.symmetric(horizontal: Gap.page);
+  /// Page padding, plus whatever it takes to sit inside the content column on
+  /// a tablet — this sliver list is otherwise full-bleed.
+  static EdgeInsets _sidesOf(BuildContext context) =>
+      EdgeInsets.symmetric(horizontal: Gap.page + context.columnInset);
 
   @override
   Widget build(BuildContext context) {
@@ -594,7 +601,7 @@ class _ActiveRides extends StatelessWidget {
         return SliverMainAxisGroup(
           slivers: [
             SliverPadding(
-              padding: _sides,
+              padding: _sidesOf(context),
               sliver: SliverToBoxAdapter(
                 child: SectionHeader(title: l10n.allActiveRides),
               ),
@@ -613,7 +620,7 @@ class _ActiveRides extends StatelessWidget {
 
     if (state.status.isFirstLoad) {
       return SliverPadding(
-        padding: _sides,
+        padding: _sidesOf(context),
         sliver: SliverList.list(
           children: const [
             RideCardSkeleton(),
@@ -651,7 +658,7 @@ class _ActiveRides extends StatelessWidget {
     }
 
     return SliverPadding(
-      padding: _sides,
+      padding: _sidesOf(context),
       sliver: SliverList.builder(
         itemCount: rides.length + 1,
         itemBuilder: (context, index) {

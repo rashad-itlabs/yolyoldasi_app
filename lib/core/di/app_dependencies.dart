@@ -35,6 +35,7 @@ import '../../features/rides/domain/repositories/ride_repository.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
 import '../network/api_client.dart';
+import '../services/push/foreground_message_watcher.dart';
 import '../services/push/local_notifications.dart';
 import '../services/push/pending_deep_link.dart';
 import '../services/push/push_service.dart';
@@ -64,6 +65,7 @@ class AppDependencies {
     required this.push,
     required this.localNotifications,
     required this.pendingDeepLink,
+    required this.foregroundMessages,
   });
 
   final ApiClient apiClient;
@@ -77,8 +79,13 @@ class AppDependencies {
   /// whether a transport is wired.
   final LocalNotifications localNotifications;
 
-  /// Parks a notification tap until the session is ready to route it.
+  /// Parks a notification tap until the session is ready to route it, and
+  /// remembers which conversation is on screen.
   final PendingDeepLink pendingDeepLink;
+
+  /// Notices a message for a thread the user is not reading, while the app is
+  /// open. Needs no push transport; covers only the foreground.
+  final ForegroundMessageWatcher foregroundMessages;
 
   final SettingsRepository settings;
   final AuthRepository auth;
@@ -116,6 +123,9 @@ class AppDependencies {
     final deviceTokens = DeviceTokenApiService(client);
     final userApi = UserApiService(client);
 
+    final chat = ChatRepositoryImpl(ChatApiService(client));
+    final deepLink = PendingDeepLink();
+
     return AppDependencies._(
       apiClient: client,
       tokens: tokens,
@@ -134,7 +144,7 @@ class AppDependencies {
       cities: CityRepositoryImpl(CityApiService(client)),
       rides: RideRepositoryImpl(RideApiService(client)),
       bookings: BookingRepositoryImpl(BookingApiService(client)),
-      chat: ChatRepositoryImpl(ChatApiService(client)),
+      chat: chat,
       reviews: ReviewRepositoryImpl(ReviewApiService(client)),
       notifications: NotificationRepositoryImpl(NotificationApiService(client)),
       reports: ReportRepositoryImpl(ReportApiService(client)),
@@ -145,11 +155,19 @@ class AppDependencies {
       // this line needs.
       push: push ?? const InactivePushService(),
       localNotifications: localNotifications ?? LocalNotifications(),
-      pendingDeepLink: PendingDeepLink(),
+      pendingDeepLink: deepLink,
+
+      // Works today, with no transport and no backend change — but only while
+      // the app is on screen.
+      foregroundMessages: ForegroundMessageWatcher(
+        chat: chat,
+        deepLink: deepLink,
+      ),
     );
   }
 
   Future<void> dispose() async {
+    await foregroundMessages.dispose();
     await push.dispose();
     await apiClient.close();
   }

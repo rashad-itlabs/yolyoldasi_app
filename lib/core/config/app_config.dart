@@ -40,6 +40,15 @@ abstract final class AppConfig {
   /// this interval while it is on screen.
   static const Duration chatPollInterval = Duration(seconds: 8);
 
+  /// How often the app re-reads `GET /conversations` while it is open, looking
+  /// for a message in a thread the user is *not* currently reading.
+  ///
+  /// Slower than [chatPollInterval] on purpose: that one keeps one open thread
+  /// live, this one only has to notice a new thread within a few seconds.
+  /// Only runs in the foreground — a suspended app runs no timers, which is
+  /// why the locked-phone case needs a push transport instead.
+  static const Duration foregroundMessageCheck = Duration(seconds: 15);
+
   static const String defaultCountryCode = '+994';
   static const String countryIso = 'AZ';
 }

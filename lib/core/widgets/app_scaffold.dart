@@ -19,7 +19,7 @@ class AppScaffold extends StatelessWidget {
     this.showBackButton = true,
     this.centerTitle = false,
     this.appBarBottom,
-    this.maxWidth = Sizes.maxContentWidth,
+    this.maxWidth,
     this.constrainWidth = true,
     this.resizeToAvoidBottomInset = true,
     this.extendBodyBehindAppBar = false,
@@ -37,7 +37,12 @@ class AppScaffold extends StatelessWidget {
   final bool showBackButton;
   final bool centerTitle;
   final PreferredSizeWidget? appBarBottom;
-  final double maxWidth;
+
+  /// Overrides the column width. Null takes the one for this screen size —
+  /// which is what almost every page wants, and what makes a tablet show a
+  /// wider column rather than a phone-width one marooned in the middle.
+  final double? maxWidth;
+
   final bool constrainWidth;
   final bool resizeToAvoidBottomInset;
   final bool extendBodyBehindAppBar;
@@ -53,6 +58,17 @@ class AppScaffold extends StatelessWidget {
         titleWidget != null ||
         (actions?.isNotEmpty ?? false);
 
+    final columnWidth = maxWidth ?? context.contentMaxWidth;
+
+    // On a tablet the body is a centred column, but the app bar is not — it
+    // spans the screen. Without this, the title sits against the left edge
+    // while the content it names starts 240pt further in, and the tab bar
+    // stretches to a width nothing below it shares. The bar keeps its
+    // full-width surface; only its contents move inward to meet the column.
+    final sideInset = constrainWidth
+        ? ((context.screenWidth - columnWidth) / 2).clamp(0.0, double.infinity)
+        : 0.0;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
@@ -63,10 +79,20 @@ class AppScaffold extends StatelessWidget {
               ? AppBar(
                   title: titleWidget ?? (title == null ? null : Text(title!)),
                   centerTitle: centerTitle,
-                  actions: actions,
+                  // `titleSpacing` is the gap before the title when there is no
+                  // leading widget, which is the case on every top-level tab.
+                  titleSpacing: sideInset == 0 ? null : sideInset + Gap.lg,
+                  actions: actions == null
+                      ? null
+                      : [
+                          ...actions!,
+                          if (sideInset > 0) SizedBox(width: sideInset),
+                        ],
                   leading: leading,
                   automaticallyImplyLeading: showBackButton,
-                  bottom: appBarBottom,
+                  bottom: appBarBottom == null || sideInset == 0
+                      ? appBarBottom
+                      : _InsetBottom(inset: sideInset, child: appBarBottom!),
                 )
               : null),
       // An AppBar supplies the status-bar inset; without one the body has to
@@ -77,7 +103,7 @@ class AppScaffold extends StatelessWidget {
         child: constrainWidth
             ? Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  constraints: BoxConstraints(maxWidth: columnWidth),
                   child: body,
                 ),
               )
@@ -87,6 +113,22 @@ class AppScaffold extends StatelessWidget {
       floatingActionButton: floatingActionButton,
     );
   }
+}
+
+/// Pads an app bar's `bottom` — a tab bar, usually — in from the screen edges
+/// so it lines up with the content column instead of stretching past it.
+class _InsetBottom extends StatelessWidget implements PreferredSizeWidget {
+  const _InsetBottom({required this.inset, required this.child});
+
+  final double inset;
+  final PreferredSizeWidget child;
+
+  @override
+  Size get preferredSize => child.preferredSize;
+
+  @override
+  Widget build(BuildContext context) =>
+      Padding(padding: EdgeInsets.symmetric(horizontal: inset), child: child);
 }
 
 /// Standard page padding for scrollable bodies.
