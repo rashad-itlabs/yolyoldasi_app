@@ -348,6 +348,8 @@ const Map<String, String> kStringsAz = {
   'notifReviewRequestTitle': 'Səfəri qiymətləndirin',
   'notifDocsApprovedTitle': 'Sənədləriniz təsdiqləndi',
   'notifDocsRejectedTitle': 'Sənədləriniz rədd edildi',
+  'notifAdminMessageTitle': 'Xidmət bildirişi',
+  'notifAdminMarketingTitle': 'Kampaniya',
   'notifUnknownTitle': 'Yeni bildiriş',
 
   // Android bildiriş kanalları — sistem parametrlərində bu adlarla görünür.

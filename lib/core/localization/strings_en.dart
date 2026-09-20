@@ -349,6 +349,8 @@ const Map<String, String> kStringsEn = {
   'notifReviewRequestTitle': 'Rate your trip',
   'notifDocsApprovedTitle': 'Your documents are approved',
   'notifDocsRejectedTitle': 'Your documents were rejected',
+  'notifAdminMessageTitle': 'Service notice',
+  'notifAdminMarketingTitle': 'Promotion',
   'notifUnknownTitle': 'New notification',
 
   // Android notification channels — these names appear in system settings.

@@ -163,7 +163,8 @@
       "Read(//Users/rashadaliyev/Documents/developer/yolyoldasi/docs/**)",
       "Bash(python3 - /private/tmp/claude-501/-Users-rashadaliyev-StudioProjects-yolyoldasi/3ef2cb14-d2c7-47ce-870a-ae7b4841e82c/scratchpad)",
       "Bash(python3 -c \"import PIL; print\\('PIL', PIL.__version__\\)\")",
-      "Read(//Users/rashadaliyev/Documents/developer/yolyoldasi/app/Services/**)"
+      "Read(//Users/rashadaliyev/Documents/developer/yolyoldasi/app/Services/**)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && sed -n '675,770p' docs/API.md)"
     ],
     "additionalDirectories": [
       "/Users/rashadaliyev/Documents/developer/yolyoldasi/config",

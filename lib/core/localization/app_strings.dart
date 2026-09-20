@@ -374,6 +374,8 @@ class AppStrings {
   String get notifReviewRequestTitle => _get('notifReviewRequestTitle');
   String get notifDocsApprovedTitle => _get('notifDocsApprovedTitle');
   String get notifDocsRejectedTitle => _get('notifDocsRejectedTitle');
+  String get notifAdminMessageTitle => _get('notifAdminMessageTitle');
+  String get notifAdminMarketingTitle => _get('notifAdminMarketingTitle');
 
   /// A `type` this build does not recognise — see [NotificationType.unknown].
   String get notifUnknownTitle => _get('notifUnknownTitle');

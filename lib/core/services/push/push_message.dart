@@ -116,16 +116,28 @@ class PushMessage extends Equatable {
   /// Falls back to the notification id, then to a constant — a push with no
   /// identity at all collapses onto one entry, which is noisy but bounded.
   int get collapseId {
+    // An announcement is the one case that must *not* collapse: the server
+    // sends no `collapse_id` for one precisely so two notices do not replace
+    // each other, and it carries no ids to tell them apart by — API.md §13
+    // says not even `notification_id`, because one request serves everyone.
+    // The text is the only thing that distinguishes them, so it is the
+    // identity. Masked to 31 bits because Android notification ids are
+    // Java ints.
+    if (type.isAnnouncement) return Object.hash(title, body) & 0x3FFFFFFF;
+
     final id = conversationId ?? bookingId ?? rideId ?? notificationId;
     return id ?? 0;
   }
 
   /// Groups the tray entry, so several messages from one thread collapse.
+  ///
+  /// Announcements share a group but not an id, so Android gathers them under
+  /// one summary rather than overwriting one with the next.
   String get collapseKey => switch (target) {
     ConversationTarget(:final conversationId) => 'conv_$conversationId',
     BookingTarget(:final bookingId) => 'booking_$bookingId',
     RideTarget(:final rideId) => 'ride_$rideId',
-    _ => 'general',
+    _ => type.isAnnouncement ? 'announcement' : 'general',
   };
 
   /// Round-trips through the flat wire form, for handing a tap between

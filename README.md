@@ -72,7 +72,6 @@ Köhnəlibsə problem deyil — `GET /me` 401 qaytarır və tətbiq giriş ekran
 | Funksiya | Vəziyyət |
 |---|---|
 | SMS provayderi | ⏸ kod hazırda cavabda qaytarılır |
-| OneSignal REST API açarı | ⏸ backend `.env`-də `ONESIGNAL_REST_API_KEY` boşdur |
 | iOS Notification Service Extension | ⏸ şəkil və çatdırılma təsdiqi üçün; push onsuz da gedir |
 | Bildiriş mərkəzi (in-app) | ✅ işləyir — `GET /notifications` |
 
@@ -202,6 +201,7 @@ həll olunub — hər biri kodda şərhlə qeyd edilib:
 | Dil Az/Ru/En | `language_code` | ✅ |
 | Hesabın silinməsi | `DELETE /auth/account` | ✅ |
 | Push **göndərilməsi** | OneSignal | ✅ backend `NotificationService` → `OneSignalService` |
+| Admin panelindən elan | `adminMessage` / `adminMarketing` | ✅ API.md §13 |
 | Admin panel | — | ❌ API-də admin endpoint-i yoxdur |
 
 ### Biznes qaydaları
@@ -252,9 +252,8 @@ flutter test
 
 ## Növbəti addımlar
 
-1. **OneSignal REST açarı** — backend `.env`-də `ONESIGNAL_REST_API_KEY` boş
-   qaldıqca push getmir (bildiriş sətri yenə yazılır). Panel: Settings →
-   Keys & IDs.
+1. **iOS Notification Service Extension** — şəkilli bildiriş və çatdırılma
+   statistikası üçün. Xcode-da target yaratmaq tələb edir; push onsuz da gedir.
 2. **Admin panel** — API-də admin endpoint-i yoxdur. `/me`-dəki `is_admin`
    bayrağı oxunur, amma istifadə olunacaq ekran yoxdur.
 3. **Xəritə inteqrasiyası** — `pickup_point` / `dropoff_point` hazırda sərbəst

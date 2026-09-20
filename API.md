@@ -676,6 +676,43 @@ qoyulan hesab dilinə görə seçir.
 (`messages` / `bookings` / `reminders`) söndürülüb · hesab nə alias, nə də
 cihaz qeyd etdirib · `ONESIGNAL_REST_API_KEY` boşdur.
 
+### Admin panelindən gələn bildirişlər
+
+Panel əl ilə də bildiriş göndərə bilir (hamıya və ya bir hesaba). Bunlar
+**adi bildiriş sətri kimi yazılır** — yəni `GET /notifications` siyahısında,
+`unread-count` sayğacında və `read` əməliyyatlarında digər növlərdən heç nə ilə
+fərqlənmirlər. Ayrıca endpoint yoxdur.
+
+```json
+{
+  "id": 310,
+  "type": "adminMessage",
+  "ride_id": null, "booking_id": null, "conversation_id": null,
+  "actor": null,
+  "payload": { "heading": "Texniki fasilə", "content": "Sabah 02:00–04:00 arası tətbiq işləməyəcək." },
+  "read_at": null,
+  "created_at": "2026-09-21T12:00:00+04:00"
+}
+```
+
+| `type` | Kanal | Kimə getmir |
+|---|---|---|
+| `adminMessage` | `yolyoldasi_default` | `push_enabled: false` |
+| `adminMarketing` | `yolyoldasi_marketing` | `push_enabled: false` və ya `marketing: false` |
+
+**Klient tərəfdə nəzərə al:**
+
+1. `actor` **null**, keçid sahələri (`ride_id` / `booking_id` /
+   `conversation_id`) **null** — siyahıda bu iki növ üçün deep-link yox, sadəcə
+   mətn göstərilməlidir.
+2. Başlıq və mətn `payload.heading` / `payload.content`-dədir; digər növlərdə
+   olduğu kimi `type`-a görə hazır mətn qurma.
+3. Push `data` bloku qısadır — `{"type": "adminMessage", "created_at": "..."}`.
+   İçində `notification_id` **yoxdur**: push bütün alıcılara bir sorğu ilə gedir,
+   sətir id-si isə hər kəsdə fərqlidir. Belə push gələndə siyahını yenilə.
+4. Tənzimləməni söndürən istifadəçi bu bildirişi **ümumiyyətlə almır** — nə push,
+   nə də siyahıda sətir.
+
 ---
 
 ## 14. Axtarış tarixçəsi

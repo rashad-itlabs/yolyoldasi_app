@@ -17,6 +17,16 @@ enum NotificationType {
   documentsApproved,
   documentsRejected,
 
+  /// Written by hand in the admin panel — a service notice.
+  adminMessage,
+
+  /// Written by hand in the admin panel — a promotion.
+  ///
+  /// Separate from [adminMessage] only because of which preference silences
+  /// it: a notice about scheduled downtime answers to `push_enabled`, a
+  /// promotion also to `marketing`.
+  adminMarketing,
+
   /// A wire value this build does not know — a newer server, or a typo.
   ///
   /// Explicit rather than folded into a real type. The previous fallback
@@ -30,7 +40,21 @@ enum NotificationType {
 
   bool get isKnown => this != NotificationType.unknown;
 
+  /// Whether the notification carries its own wording and leads nowhere.
+  ///
+  /// The two admin types are the exception to almost every rule in this file:
+  /// their text is written by a person and travels in `payload`, rather than
+  /// being a localized line the app picks from [titleKey]; and all three
+  /// deep-link ids are null *by design*, not because the subject was deleted.
+  /// Code that treats "no target" as a broken link has to ask this first.
+  bool get isAnnouncement =>
+      this == NotificationType.adminMessage ||
+      this == NotificationType.adminMarketing;
+
   /// Localization key for the notification title.
+  ///
+  /// For an announcement this is only the fallback, used when the admin's own
+  /// heading is missing.
   String get titleKey => switch (this) {
     NotificationType.bookingRequested => 'notifNewBookingTitle',
     NotificationType.bookingConfirmed => 'notifBookingConfirmedTitle',
@@ -42,6 +66,8 @@ enum NotificationType {
     NotificationType.reviewRequest => 'notifReviewRequestTitle',
     NotificationType.documentsApproved => 'notifDocsApprovedTitle',
     NotificationType.documentsRejected => 'notifDocsRejectedTitle',
+    NotificationType.adminMessage => 'notifAdminMessageTitle',
+    NotificationType.adminMarketing => 'notifAdminMarketingTitle',
     NotificationType.unknown => 'notifUnknownTitle',
   };
 
@@ -128,7 +154,29 @@ class AppNotification extends Equatable {
     return NotificationTarget.none;
   }
 
-  bool get isDeadLink => target is _NoTarget;
+  /// Nothing to open, *and* nothing should have been.
+  ///
+  /// An announcement has no ids either, but that is how it is meant to be —
+  /// calling it a dead link would strike out a perfectly good notice in the
+  /// list and answer a tap on it with "this no longer exists".
+  bool get isDeadLink => target is _NoTarget && !type.isAnnouncement;
+
+  /// The admin's own title, for the types that carry one (API.md §13).
+  ///
+  /// Null for every other type, whose title is a localized line chosen by
+  /// [NotificationType.titleKey] instead.
+  String? get heading => _text('heading');
+
+  /// The admin's own body text. See [heading].
+  String? get body => _text('content');
+
+  String? _text(String key) {
+    if (!type.isAnnouncement) return null;
+    final value = payload[key];
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
 
   /// Extras the title lines interpolate, e.g. the seat count.
   int? get seats {

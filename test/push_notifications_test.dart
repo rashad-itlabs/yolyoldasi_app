@@ -224,6 +224,130 @@ void main() {
     });
   });
 
+  group('an announcement from the admin panel', () {
+    // API.md §13. These two carry their own wording and have all three
+    // deep-link ids null *by design*. Every rule in this file about "no ids
+    // means the subject was deleted" has to make an exception for them, and
+    // the failure mode if it does not is quiet: a perfectly good service
+    // notice renders as "this no longer exists" and a tap on it errors.
+    AppNotification announcement(NotificationType type) => AppNotification(
+      id: 310,
+      type: type,
+      createdAt: DateTime.utc(2026, 9, 21),
+      payload: const {
+        'heading': 'Texniki fasilə',
+        'content': 'Sabah 02:00–04:00 arası tətbiq işləməyəcək.',
+      },
+    );
+
+    test('is not a dead link, though it targets nothing', () {
+      for (final type in [
+        NotificationType.adminMessage,
+        NotificationType.adminMarketing,
+      ]) {
+        final item = announcement(type);
+        expect(item.target, isA<NotificationTarget>(), reason: type.name);
+        expect(item.isDeadLink, isFalse, reason: type.name);
+      }
+    });
+
+    test('a genuinely dead link is still called one', () {
+      // The exception above must not swallow the case it was carved out of.
+      final orphan = AppNotification(
+        id: 1,
+        type: NotificationType.bookingConfirmed,
+        createdAt: DateTime.utc(2026, 9, 21),
+      );
+      expect(orphan.isDeadLink, isTrue);
+    });
+
+    test('its text comes from the payload, not from the type', () {
+      final item = announcement(NotificationType.adminMessage);
+      expect(item.heading, 'Texniki fasilə');
+      expect(item.body, 'Sabah 02:00–04:00 arası tətbiq işləməyəcək.');
+    });
+
+    test('no other type reads that payload', () {
+      // `heading` / `content` are the admin's keys. A booking whose payload
+      // happened to carry them must not have its localized title overwritten.
+      final booking = AppNotification(
+        id: 2,
+        type: NotificationType.bookingConfirmed,
+        createdAt: DateTime.utc(2026, 9, 21),
+        payload: const {'heading': 'nope', 'content': 'nope'},
+      );
+
+      expect(booking.heading, isNull);
+      expect(booking.body, isNull);
+    });
+
+    test('a blank heading falls back rather than showing an empty title', () {
+      final blank = AppNotification(
+        id: 3,
+        type: NotificationType.adminMessage,
+        createdAt: DateTime.utc(2026, 9, 21),
+        payload: const {'heading': '   ', 'content': 'Mətn'},
+      );
+
+      expect(blank.heading, isNull, reason: 'so the type line is used');
+      expect(blank.body, 'Mətn');
+    });
+
+    test('a promotion lands on the channel that can never interrupt', () {
+      // The only type that reaches `marketing`, whose low importance is frozen
+      // at creation and cannot be raised later.
+      expect(
+        PushChannel.forType(NotificationType.adminMarketing),
+        PushChannel.marketing,
+      );
+      expect(
+        PushChannel.forType(NotificationType.adminMessage),
+        PushChannel.fallback,
+      );
+    });
+
+    test('two notices stack in the tray instead of replacing each other', () {
+      // The server omits `collapse_id` for an announcement on purpose. With no
+      // ids to tell two apart, both would land on tray entry 0 and the second
+      // would overwrite the first — so the text is the identity here.
+      final outage = PushMessage.fromData(
+        const {'type': 'adminMessage'},
+        title: 'Texniki fasilə',
+        body: 'Sabah 02:00–04:00.',
+      );
+      final promo = PushMessage.fromData(
+        const {'type': 'adminMessage'},
+        title: 'Endirim',
+        body: 'Bu həftə 20%.',
+      );
+
+      expect(outage.collapseId, isNot(promo.collapseId));
+      expect(
+        outage.collapseId,
+        PushMessage.fromData(
+          const {'type': 'adminMessage'},
+          title: 'Texniki fasilə',
+          body: 'Sabah 02:00–04:00.',
+        ).collapseId,
+        reason: 'the same notice twice is still one entry',
+      );
+
+      // Grouped rather than merged: Android gathers them under one summary.
+      expect(outage.collapseKey, 'announcement');
+      expect(promo.collapseKey, 'announcement');
+    });
+
+    test('tapping one opens the notification centre, not an error', () {
+      // The push `data` for an announcement carries no ids at all — API.md §13
+      // says not even `notification_id`, because one request serves every
+      // recipient. The full text lives in the list, so that is where it leads.
+      final pending = PendingDeepLink()
+        ..offer(PushMessage.fromData({'type': 'adminMarketing'}));
+
+      expect(pending.takeRoute(), '/notifications');
+    });
+  });
+
   group('signing out releases the device token', () {
     late _StubAdapter adapter;
     late _FakePushService push;

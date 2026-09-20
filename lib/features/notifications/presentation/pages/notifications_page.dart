@@ -45,6 +45,10 @@ class _NotificationsView extends StatelessWidget {
       context.read<BadgesBloc>().add(const BadgesRefreshed());
     }
 
+    // An announcement is already fully on screen — its whole text is the row.
+    // Marking it read is all a tap can do, and an error toast would be a lie.
+    if (item.type.isAnnouncement) return;
+
     switch (item.target) {
       case ConversationTarget(:final conversationId):
         context.push(Routes.conversation(conversationId));
@@ -172,7 +176,11 @@ class _NotificationsView extends StatelessWidget {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          l10n.byKey(item.type.titleKey),
+                                          // An announcement carries its own
+                                          // wording; every other type gets the
+                                          // localized line for its kind.
+                                          item.heading ??
+                                              l10n.byKey(item.type.titleKey),
                                           style: context.text.titleSmall
                                               ?.copyWith(
                                                 fontWeight: item.isRead
@@ -228,6 +236,10 @@ class _NotificationsView extends StatelessWidget {
     final l10n = context.l10n;
     if (item.isDeadLink) return l10n.linkUnavailableTitle;
 
+    // The admin wrote this line themselves. There is no actor and no seat
+    // count to assemble one from, and there was never meant to be.
+    if (item.type.isAnnouncement) return item.body ?? '';
+
     final actor = item.actor?.fullName;
     final seats = item.seats;
     return [
@@ -272,6 +284,17 @@ class _NotificationsView extends StatelessWidget {
       NotificationType.documentsRejected => (
         Icons.gpp_bad_rounded,
         palette.danger,
+      ),
+      // Both come from a person rather than from something that happened in
+      // the app, so they share a megaphone; the colour is what separates a
+      // service notice from a promotion.
+      NotificationType.adminMessage => (
+        Icons.campaign_rounded,
+        palette.info,
+      ),
+      NotificationType.adminMarketing => (
+        Icons.campaign_rounded,
+        palette.accent,
       ),
       // A type this build does not know. Neutral on purpose: borrowing another
       // type's icon is how the old fallback misled people.

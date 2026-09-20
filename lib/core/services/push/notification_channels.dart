@@ -26,8 +26,9 @@ enum PushChannel {
   /// that waits for the next time the user unlocks is a reminder that failed.
   reminders('yolyoldasi_reminders', ChannelImportance.high),
 
-  /// Promotions. Must never interrupt, and there is no future in which it
-  /// should — which is the only reason it is safe to freeze this one low.
+  /// Promotions — `adminMarketing`, sent by hand from the admin panel. Must
+  /// never interrupt, and there is no future in which it should, which is the
+  /// only reason it is safe to freeze this one low.
   marketing('yolyoldasi_marketing', ChannelImportance.low),
 
   /// Account notices, and anything this build does not recognise.
@@ -56,8 +57,10 @@ enum PushChannel {
     NotificationType.rideCancelled ||
     NotificationType.reviewRequest => PushChannel.bookings,
     NotificationType.rideReminder => PushChannel.reminders,
+    NotificationType.adminMarketing => PushChannel.marketing,
     NotificationType.documentsApproved ||
     NotificationType.documentsRejected ||
+    NotificationType.adminMessage ||
     NotificationType.unknown => PushChannel.fallback,
   };
 

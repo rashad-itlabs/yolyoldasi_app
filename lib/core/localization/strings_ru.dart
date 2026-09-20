@@ -348,6 +348,8 @@ const Map<String, String> kStringsRu = {
   'notifReviewRequestTitle': 'Оцените поездку',
   'notifDocsApprovedTitle': 'Документы подтверждены',
   'notifDocsRejectedTitle': 'Документы отклонены',
+  'notifAdminMessageTitle': 'Сервисное уведомление',
+  'notifAdminMarketingTitle': 'Акция',
   'notifUnknownTitle': 'Новое уведомление',
 
   // Каналы уведомлений Android — под этими именами они видны в настройках.

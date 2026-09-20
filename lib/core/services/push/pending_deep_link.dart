@@ -69,12 +69,19 @@ class PendingDeepLink {
   /// Derived from [AppNotification.target] rather than from the push's own
   /// fields, so a tap on a banner and a tap on the same entry in the
   /// notification centre can never disagree.
-  static String? routeFor(PushMessage message) => switch (message.target) {
-    ConversationTarget(:final conversationId) => Routes.conversation(
-      conversationId,
-    ),
-    BookingTarget(:final bookingId) => Routes.bookingDetail(bookingId),
-    RideTarget(:final rideId) => Routes.rideDetail(rideId),
-    _ => null,
-  };
+  static String? routeFor(PushMessage message) {
+    // An announcement has no subject to open — API.md §13 says its ids are all
+    // null by design. The notification centre is where its full text lives, so
+    // that is where a tap goes; the push itself is truncated by the tray.
+    if (message.type.isAnnouncement) return Routes.notifications;
+
+    return switch (message.target) {
+      ConversationTarget(:final conversationId) => Routes.conversation(
+        conversationId,
+      ),
+      BookingTarget(:final bookingId) => Routes.bookingDetail(bookingId),
+      RideTarget(:final rideId) => Routes.rideDetail(rideId),
+      _ => null,
+    };
+  }
 }
