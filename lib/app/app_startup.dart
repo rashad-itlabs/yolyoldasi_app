@@ -52,6 +52,7 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   /// sign-in on the same launch does not prompt again.
   bool _pushStarted = false;
 
+
   @override
   void initState() {
     super.initState();
@@ -114,8 +115,17 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     session.add(const SessionRefreshed());
     context.read<BadgesBloc>().add(const BadgesRefreshed());
 
-    final userId = session.state.userId;
-    if (userId != null) _watcher.start(userId: userId);
+    // Re-settling push on resume is how the app notices permission that was
+    // granted *outside* it. A user who refuses the prompt, then turns
+    // notifications on weeks later in the OS settings, never signs in again —
+    // so without this the transport would stay written off as unusable and the
+    // poller would go on announcing every message a second time. Repeating it
+    // is cheap: the prompt is shown once, and asking for permission that is
+    // already granted only reports the current answer.
+    //
+    // It also restarts or stops the watcher, which is why nothing else here
+    // touches it.
+    unawaited(_startPush(session.state));
   }
 
   @override
@@ -162,12 +172,7 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
       context.read<SettingsBloc>().add(SettingsLanguageSynced(languageCode));
     }
 
-    unawaited(_startPush());
-
-    // The half that works with no transport at all: while the app is open, a
-    // message for a thread the user is not reading still raises a notification.
-    final userId = state.user?.id;
-    if (userId != null) _watcher.start(userId: userId);
+    unawaited(_startPush(state));
 
     // A tap that cold-started the app has been waiting for exactly this: the
     // router rewrites every location to /splash while the session is booting,
@@ -175,13 +180,21 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     if (state.status == SessionStatus.ready) _drainPendingLink();
   }
 
-  /// Creates the channels, asks for permission, and registers the token.
+  /// Creates the channels, settles permission, names the account to the
+  /// transport, and registers the subscription.
   ///
   /// Ordered deliberately. The channels exist before anything can be posted to
-  /// them; permission is settled before a token is asked for, because on iOS
-  /// APNs issues none without it; and the token reaches the API last, so the
-  /// server never holds a token for a device that cannot show anything.
-  Future<void> _startPush() async {
+  /// them; permission is settled before a subscription is asked for, because on
+  /// iOS APNs issues none without it; `identify` runs next, because it is what
+  /// makes the account addressable at all; and only then does the subscription
+  /// id reach the API, so the server never holds an id for a device that cannot
+  /// show anything.
+  ///
+  /// [identify] is the one step that runs even when permission was refused.
+  /// The alias is free to record and costs nothing if it is never used, and it
+  /// means a user who turns notifications on months later in the OS settings is
+  /// reachable immediately, with no further sign-in.
+  Future<void> _startPush(SessionState state) async {
     if (!_pushStarted) {
       _pushStarted = true;
       if (!mounted) return;
@@ -190,6 +203,26 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     }
 
     final granted = await _push.start();
+
+    final user = state.user;
+    if (user != null) {
+      await _push.identify(
+        externalId: user.id.toString(),
+        languageCode: user.languageCode,
+      );
+    }
+
+    // Polling is the consolation prize, not a supplement: with a working
+    // transport it would announce every message a second time. This is the
+    // only place the choice is made, and it is remade on every resume, so
+    // permission granted outside the app is picked up without a sign-in.
+    final userId = user?.id;
+    if (granted) {
+      _watcher.stop();
+    } else if (userId != null) {
+      _watcher.start(userId: userId);
+    }
+
     if (!granted) return;
 
     final token = _push.currentToken;
@@ -197,13 +230,20 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   }
 
   /// `POST /me/device-tokens` — API.md §5 does `updateOrCreate`, so re-sending
-  /// the same token on every launch is both safe and the documented usage.
+  /// the same id on every launch is both safe and the documented usage.
+  ///
+  /// `external_id` travels with it so the server can record which account this
+  /// device is addressable as, and fall back to the subscription id only when
+  /// the alias route fails.
   Future<void> _registerToken(String token) async {
     if (!mounted) return;
+    final userId = context.read<SessionBloc>().state.userId;
     final users = context.read<UserRepository>();
     await users.registerDeviceToken(
       token: token,
       platform: DevicePlatform.current,
+      provider: _push.provider,
+      externalId: userId?.toString(),
     );
   }
 

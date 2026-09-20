@@ -29,6 +29,27 @@ abstract final class AppConfig {
   /// harmless: `GET /me` answers 401 and the app signs straight back out.
   static const String devApiToken = String.fromEnvironment('DEV_API_TOKEN');
 
+  /// The OneSignal application this build reports to.
+  ///
+  /// Not a secret: it identifies the app to the relay and can do nothing on its
+  /// own. The key that can actually *send* a notification is the REST API key,
+  /// and that one lives only in the Laravel `.env` — a build that shipped it
+  /// would hand every installer the ability to notify the whole user base.
+  ///
+  /// Overridable so a staging OneSignal app can be pointed at without a code
+  /// change, and so a build can opt out of push entirely:
+  ///
+  /// ```
+  /// flutter run --dart-define=ONESIGNAL_APP_ID=
+  /// ```
+  ///
+  /// Empty disables the transport — [InactivePushService] takes over and the
+  /// app falls back to noticing messages by polling while it is open.
+  static const String oneSignalAppId = String.fromEnvironment(
+    'ONESIGNAL_APP_ID',
+    defaultValue: '91e4f700-6a5e-43fd-99f2-0ad18ae85fc4',
+  );
+
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
 

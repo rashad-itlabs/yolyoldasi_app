@@ -36,11 +36,19 @@ abstract interface class UserRepository {
     NotificationPreferences preferences,
   );
 
-  /// `POST /me/device-tokens`. Called after sign-in, on `onTokenRefresh` and
-  /// on every launch.
+  /// `POST /me/device-tokens`. Called after sign-in, whenever the subscription
+  /// rotates, and on every launch.
+  ///
+  /// [provider] names the transport that issued [token] — the server cannot
+  /// tell an FCM registration token from a OneSignal subscription id by shape,
+  /// and it reaches them through different APIs. [externalId] is the account
+  /// alias the device was logged in under, which is how the server addresses
+  /// the *user* rather than chasing their individual devices.
   FutureResult<void> registerDeviceToken({
     required String token,
     required DevicePlatform platform,
+    String? provider,
+    String? externalId,
   });
 
   /// `DELETE /me/device-tokens`. Call before signing out.

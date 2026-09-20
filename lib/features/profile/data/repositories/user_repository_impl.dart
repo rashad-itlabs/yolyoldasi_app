@@ -68,7 +68,14 @@ class UserRepositoryImpl implements UserRepository {
   FutureResult<void> registerDeviceToken({
     required String token,
     required DevicePlatform platform,
-  }) => _deviceTokens.register(token: token, platform: platform);
+    String? provider,
+    String? externalId,
+  }) => _deviceTokens.register(
+    token: token,
+    platform: platform,
+    provider: provider,
+    externalId: externalId,
+  );
 
   @override
   FutureResult<void> unregisterDeviceToken(String token) =>

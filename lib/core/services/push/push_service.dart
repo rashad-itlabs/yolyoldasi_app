@@ -21,6 +21,22 @@ abstract interface class PushService {
   /// refused, or when no transport is configured. Safe to call more than once.
   Future<bool> start();
 
+  /// Ties this device to an account, so the server can address a *user* rather
+  /// than hunting for their devices.
+  ///
+  /// [externalId] is the API's own user id as a string. It is the single most
+  /// important call in this interface: a transport that knows it can be told
+  /// "notify user 42" and will reach every phone, tablet and reinstall that
+  /// account has ever signed in on — including ones whose registration token
+  /// this app never managed to POST.
+  ///
+  /// [languageCode] lets the transport pick the right one of the az/ru/en
+  /// strings the server sends with every push.
+  ///
+  /// Call it on sign-in, and again whenever the account's language changes.
+  /// Idempotent.
+  Future<void> identify({required String externalId, String? languageCode});
+
   /// The registration token this device is currently known by.
   ///
   /// Null before [start], when permission was refused, or when there is no
@@ -28,6 +44,14 @@ abstract interface class PushService {
   /// `DELETE /me/device-tokens` must be given before sign-out — see
   /// [AuthRepository.logout].
   String? get currentToken;
+
+  /// Names the transport that issued [currentToken], for the `provider` field
+  /// of `POST /me/device-tokens` (API.md §5).
+  ///
+  /// The server needs it because the token's *shape* is not enough to tell an
+  /// FCM registration token from a OneSignal subscription id, and it addresses
+  /// them through different APIs.
+  String get provider;
 
   /// Tokens as they are issued and rotated.
   ///
@@ -57,14 +81,15 @@ abstract interface class PushService {
   Future<void> dispose();
 }
 
-/// The transport that does nothing, used while none is configured.
+/// The transport that does nothing, used when none is configured.
 ///
-/// It is not a test double: it is what ships until `google-services.json` and
-/// an APNs key exist. Everything above it — the channels, the permission
-/// prompt, the deep-link routing, the foreground renderer — is live and
-/// exercised; only delivery is absent. [currentToken] stays null, so the
-/// registration call is skipped rather than posting a placeholder the server
-/// would later try to send to.
+/// It is not a test double: a build with `--dart-define=ONESIGNAL_APP_ID=`
+/// gets this one, and everything above it — the channels, the permission
+/// prompt, the deep-link routing, the foreground renderer — stays live and
+/// exercised; only delivery is absent, and [ForegroundMessageWatcher] fills in
+/// while the app is on screen. [currentToken] stays null, so the registration
+/// call is skipped rather than posting a placeholder the server would later
+/// try to send to.
 class InactivePushService implements PushService {
   const InactivePushService();
 
@@ -72,7 +97,16 @@ class InactivePushService implements PushService {
   Future<bool> start() async => false;
 
   @override
+  Future<void> identify({
+    required String externalId,
+    String? languageCode,
+  }) async {}
+
+  @override
   String? get currentToken => null;
+
+  @override
+  String get provider => 'none';
 
   @override
   Stream<String> get tokenChanges => const Stream<String>.empty();

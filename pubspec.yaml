@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+3
+version: 1.0.0+4
 
 environment:
   sdk: ^3.10.4
@@ -64,14 +64,17 @@ dependencies:
   # Independent of any push transport: it renders, it does not deliver.
   flutter_local_notifications: ^19.4.2
 
+  # The push transport — the half that reaches a locked phone. OneSignal is a
+  # relay in front of FCM and APNs rather than a third channel: it holds the
+  # Firebase server key and the APNs auth key, which is why this project ships
+  # no `google-services.json` and no `GoogleService-Info.plist`. Only the app
+  # id is compiled in, and it is not a secret; the REST API key that can
+  # actually send lives in the Laravel `.env`.
+  onesignal_flutter: ^5.6.11
+
   # No Firebase **Auth**. `POST /auth/firebase` needs an ID token this app can
   # no longer produce, so sign-in takes a Sanctum token directly — see
   # `features/auth/`. An SMS provider will replace that later.
-  #
-  # This is not a ban on FCM: API.md §5 and §13 are written around it, and
-  # `core/services/push/` is the seam a transport plugs into. Adding
-  # `firebase_messaging` needs `google-services.json` (Android) and
-  # `GoogleService-Info.plist` + an APNs key (iOS) first, or the build breaks.
 
 dev_dependencies:
   flutter_test:

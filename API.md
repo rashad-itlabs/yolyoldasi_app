@@ -256,20 +256,51 @@ klient "hamısını söndür" düyməsini ona bağlamalıdır.
 
 ---
 
-## 5. Cihaz tokenləri (FCM)
+## 5. Cihaz tokenləri (OneSignal)
 
 ### POST `/me/device-tokens` → 201
-`{ "token": "<fcm_token>", "platform": "android" }`
+```json
+{
+  "token": "a1b2c3d4-...",
+  "platform": "android",
+  "provider": "onesignal",
+  "external_id": "42"
+}
+```
+
+| Sahə | Qayda |
+|---|---|
+| `token` | **məcburi** — OneSignal **subscription id** (köhnə klientlərdə FCM tokeni) |
+| `platform` | **məcburi**, `android`\|`ios` |
+| `provider` | ixtiyari, `onesignal`\|`fcm` — göndərilməsə `fcm` sayılır |
+| `external_id` | ixtiyari — hesabın id-si, sətir kimi |
+
+`token` artıq FCM registration tokeni deyil, OneSignal subscription id-sidir.
+Formasına baxıb ayırd etmək mümkün olmadığına görə `provider` hansı olduğunu
+deyir; ikisi fərqli API ilə ünvanlanır. Köhnə tətbiq versiyaları bu sahəni
+göndərmir və `fcm` sayılır.
+
+`external_id` hesabın öz id-sidir — tətbiq girişdən sonra
+`OneSignal.login(user_id)` çağırır və həmin dəyəri buraya ötürür. Server onu
+`users.onesignal_external_id`-yə yazır və bundan sonra bildirişi **cihaz
+siyahısına yox, birbaşa hesaba** ünvanlayır. Fərq boşluqlardadır: token
+dəyişəndə, bu sorğu alınmayanda və ya tətbiq yenidən quraşdırılanda cihaz
+siyahıdan sakitcə düşür, alias isə qalır. Başqasının id-si göndərilsə
+gözardı edilir.
 
 Token cihazla birlikdə hesablar arasında köçdüyü üçün server `updateOrCreate`
 işlədir — eyni tokeni təkrar göndərmək təhlükəsizdir.
 
-**Nə vaxt çağırmalı:** girişdən dərhal sonra, `onTokenRefresh` hadisəsində və
+**Nə vaxt çağırmalı:** girişdən dərhal sonra, subscription dəyişəndə və
 tətbiq hər dəfə açılanda.
 
 ### DELETE `/me/device-tokens`
-`{ "token": "<fcm_token>" }` — çıxışdan **əvvəl** çağır, yoxsa cihaz köhnə
-hesabın bildirişlərini almağa davam edər.
+`{ "token": "<subscription_id>" }` — çıxışdan **əvvəl** çağır, yoxsa cihaz
+köhnə hesabın bildirişlərini almağa davam edər.
+
+`users.onesignal_external_id` qəsdən silinmir: tətbiq `OneSignal.logout()`
+çağırdığı üçün bu cihaz artıq həmin hesabın adı altında görünmür, alias-ı
+silmək isə eyni hesabın *digər* cihazlarını da kəsərdi.
 
 ---
 
@@ -616,8 +647,34 @@ ekrana keçəcəyini göstərir. **Hər üçü `null` ola bilər** — əlaqəli
 silinibsə keçid ölür. Klient bu halda siyahıda qalan bildirişə toxunanda
 boş ekran yox, "artıq mövcud deyil" mesajı göstərməlidir.
 
-> Push bildirişləri hələ **göndərilmir** — bu endpoint-lər yalnız tətbiqdaxili
-> siyahını doldurur. FCM qoşulanda payload strukturu eyni qalacaq.
+### Push payload
+
+Hər bildiriş sətri yaradılanda OneSignal-a da göndərilir (`OneSignalService`).
+`data` bloku **düz** və **tamamilə sətirlərdən** ibarətdir — FCM `data` bloku
+yalnız `Map<String, String>` saxlaya bilir və klientdəki `PushMessage.fromData`
+da buna görə yazılıb. İç-içə `actor` obyekti göndərilsə klientdə səssizcə
+itərdi, ona görə yalnız ad düz açar kimi gedir:
+
+```json
+{
+  "type": "newMessage",
+  "notification_id": "120",
+  "ride_id": "7",
+  "booking_id": "88",
+  "conversation_id": "14",
+  "actor_name": "Rəşad Məmmədov",
+  "created_at": "..."
+}
+```
+
+Boş sahələr ümumiyyətlə göndərilmir. Başlıq və mətn `az`/`ru`/`en` üçün birlikdə
+gedir; cihaz hansını göstərəcəyini tətbiqdə `OneSignal.User.setLanguage()` ilə
+qoyulan hesab dilinə görə seçir.
+
+**Göndərilməmə halları** — sətir hər halda yazılır, sadəcə push getmir:
+`notification_preferences.push_enabled` söndürülüb · növün öz açarı
+(`messages` / `bookings` / `reminders`) söndürülüb · hesab nə alias, nə də
+cihaz qeyd etdirib · `ONESIGNAL_REST_API_KEY` boşdur.
 
 ---
 

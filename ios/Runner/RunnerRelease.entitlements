@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Release and Profile builds. The only difference from
+	     Runner.entitlements is this value, and it is the difference between a
+	     TestFlight build that receives push and one that silently does not:
+	     APNs sandbox and production are separate services with separate device
+	     tokens, and a production build carrying `development` registers with
+	     the sandbox that Apple's live servers never send to.
+
+	     The failure is invisible — no build error, no runtime error, just no
+	     notifications — which is why the two configurations point at two files
+	     instead of one file someone has to remember to flip. -->
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>

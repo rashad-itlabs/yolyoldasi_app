@@ -24,6 +24,7 @@ import 'package:yolyoldasi/features/profile/data/repositories/user_repository_im
 import 'package:yolyoldasi/features/profile/data/services/device_token_api_service.dart';
 import 'package:yolyoldasi/features/profile/data/services/user_api_service.dart';
 import 'package:yolyoldasi/features/profile/domain/entities/app_user.dart';
+import 'package:yolyoldasi/features/profile/domain/entities/user_enums.dart';
 import 'package:yolyoldasi/features/settings/domain/repositories/settings_repository.dart';
 
 /// Push delivery, from the wire payload down to where a tap lands — plus the
@@ -294,6 +295,56 @@ void main() {
     });
   });
 
+  group('registering a device names the account', () {
+    // API.md §5. The external id is what lets the server address a *user*
+    // instead of hunting for their devices, and it is the whole reason a
+    // reinstall or a rotated subscription still reaches the phone. If it stops
+    // travelling, nothing breaks loudly — push simply starts missing people.
+    late _StubAdapter adapter;
+    late DeviceTokenApiService service;
+
+    setUp(() {
+      adapter = _StubAdapter()..reply(201, {'data': {}});
+      service = DeviceTokenApiService(
+        ApiClient(
+          tokens: InMemoryTokenStorage(),
+          dio: Dio()..httpClientAdapter = adapter,
+          baseUrl: 'https://example.test/api/v1',
+        ),
+      );
+    });
+
+    Map<String, dynamic> lastBody() =>
+        adapter.requests.last.data as Map<String, dynamic>;
+
+    test('the subscription id travels with its provider and alias', () async {
+      await service.register(
+        token: 'sub-id-abc',
+        platform: DevicePlatform.ios,
+        provider: 'onesignal',
+        externalId: '42',
+      );
+
+      expect(lastBody(), {
+        'token': 'sub-id-abc',
+        'platform': 'ios',
+        'provider': 'onesignal',
+        'external_id': '42',
+      });
+    });
+
+    test('neither is sent as null when the transport has none', () async {
+      // Both are `sometimes` on the server, so an explicit null would
+      // overwrite a good value recorded on a previous launch.
+      await service.register(
+        token: 'sub-id-abc',
+        platform: DevicePlatform.android,
+      );
+
+      expect(lastBody(), {'token': 'sub-id-abc', 'platform': 'android'});
+    });
+  });
+
   group('a message while the app is open but elsewhere', () {
     // The half that needs no push transport: the app is running, so it can ask.
     // Covers "on another screen" only — a backgrounded app runs no timers, and
@@ -490,12 +541,26 @@ class _FakePushService implements PushService {
 
   String? _token;
   bool cleared = false;
+  String? externalId;
+  String? languageCode;
 
   @override
   String? get currentToken => _token;
 
   @override
+  String get provider => 'fake';
+
+  @override
   Future<bool> start() async => true;
+
+  @override
+  Future<void> identify({
+    required String externalId,
+    String? languageCode,
+  }) async {
+    this.externalId = externalId;
+    this.languageCode = languageCode;
+  }
 
   @override
   Stream<String> get tokenChanges => const Stream<String>.empty();
@@ -511,6 +576,7 @@ class _FakePushService implements PushService {
   Future<void> clear() async {
     cleared = true;
     _token = null;
+    externalId = null;
   }
 
   @override

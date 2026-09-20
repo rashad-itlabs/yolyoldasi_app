@@ -37,7 +37,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Channel used for every Firebase Cloud Messaging notification. -->
+        <!-- The last-resort channel. Every push the server sends names its own
+             channel through `existing_android_channel_id` (see
+             config/onesignal.php on the API side), and those channels are
+             created at launch by LocalNotifications. This only catches a
+             notification that arrives naming none — without it the system
+             would invent an unnamed channel the user cannot recognise in
+             their settings list. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="yolyoldasi_default" />

@@ -13,13 +13,24 @@ class DeviceTokenApiService {
   ///
   /// The server does `updateOrCreate`, so re-sending the same token is safe —
   /// which is what makes "call it on every launch" the recommended usage.
+  ///
+  /// [provider] and [externalId] are omitted rather than sent empty when the
+  /// transport has neither: both are `sometimes` on the server, and a null
+  /// would overwrite a good value recorded on a previous launch.
   FutureResult<void> register({
     required String token,
     required DevicePlatform platform,
+    String? provider,
+    String? externalId,
   }) => _client.send(
     'POST',
     Api.meDeviceTokens,
-    body: {'token': token, 'platform': platform.apiValue},
+    body: {
+      'token': token,
+      'platform': platform.apiValue,
+      'provider': ?provider,
+      'external_id': ?externalId,
+    },
   );
 
   /// `DELETE /me/device-tokens`

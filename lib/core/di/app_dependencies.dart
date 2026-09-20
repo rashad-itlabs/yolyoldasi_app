@@ -34,9 +34,11 @@ import '../../features/rides/data/services/ride_api_service.dart';
 import '../../features/rides/domain/repositories/ride_repository.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
+import '../config/app_config.dart';
 import '../network/api_client.dart';
 import '../services/push/foreground_message_watcher.dart';
 import '../services/push/local_notifications.dart';
+import '../services/push/onesignal_push_service.dart';
 import '../services/push/pending_deep_link.dart';
 import '../services/push/push_service.dart';
 import '../services/token_storage.dart';
@@ -71,8 +73,8 @@ class AppDependencies {
   final ApiClient apiClient;
   final TokenStorage tokens;
 
-  /// The push transport. [InactivePushService] until one is configured — see
-  /// `core/services/push/push_service.dart`.
+  /// The push transport — [OneSignalPushService], or [InactivePushService] in
+  /// a build with no app id. See `core/services/push/push_service.dart`.
   final PushService push;
 
   /// Draws notifications and owns the Android channels. Live regardless of
@@ -149,22 +151,33 @@ class AppDependencies {
       notifications: NotificationRepositoryImpl(NotificationApiService(client)),
       reports: ReportRepositoryImpl(ReportApiService(client)),
 
-      // No transport is configured yet, so this is the inactive one: the
-      // channels, the permission prompt and the routing are all live, and only
-      // delivery is missing. Swapping in an FCM implementation is the one edit
-      // this line needs.
-      push: push ?? const InactivePushService(),
+      // OneSignal, unless a test passed its own or the app id was compiled
+      // out — in which case the inactive transport takes over and the
+      // foreground watcher below is the only thing noticing new messages.
+      push: push ?? _defaultPushService(),
       localNotifications: localNotifications ?? LocalNotifications(),
       pendingDeepLink: deepLink,
 
-      // Works today, with no transport and no backend change — but only while
-      // the app is on screen.
+      // The fallback for when push cannot deliver — permission refused, or no
+      // app id in this build. Only covers the app being on screen; see
+      // [AppStartup], which starts it only when the transport did not.
       foregroundMessages: ForegroundMessageWatcher(
         chat: chat,
         deepLink: deepLink,
       ),
     );
   }
+
+  /// OneSignal when there is an app id to point it at, nothing otherwise.
+  ///
+  /// The empty case is real rather than defensive: `--dart-define=
+  /// ONESIGNAL_APP_ID=` produces a build with no transport, and everything
+  /// above this line — channels, permission, routing, the foreground watcher —
+  /// still works. It is how the app is exercised without a relay.
+  static PushService _defaultPushService() =>
+      AppConfig.oneSignalAppId.isEmpty
+      ? const InactivePushService()
+      : OneSignalPushService();
 
   Future<void> dispose() async {
     await foregroundMessages.dispose();

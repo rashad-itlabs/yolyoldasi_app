@@ -72,9 +72,9 @@ Köhnəlibsə problem deyil — `GET /me` 401 qaytarır və tətbiq giriş ekran
 | Funksiya | Vəziyyət |
 |---|---|
 | SMS provayderi | ⏸ kod hazırda cavabda qaytarılır |
-| Push bildirişləri (FCM) | ⏸ API.md §13-ə görə backend onsuz da göndərmirdi |
+| OneSignal REST API açarı | ⏸ backend `.env`-də `ONESIGNAL_REST_API_KEY` boşdur |
+| iOS Notification Service Extension | ⏸ şəkil və çatdırılma təsdiqi üçün; push onsuz da gedir |
 | Bildiriş mərkəzi (in-app) | ✅ işləyir — `GET /notifications` |
-| `POST /me/device-tokens` | kod qalıb, çağıran yoxdur (token mənbəyi yoxdur) |
 
 ---
 
@@ -201,7 +201,7 @@ həll olunub — hər biri kodda şərhlə qeyd edilib:
 | Şikayət | `POST /reports` | ✅ |
 | Dil Az/Ru/En | `language_code` | ✅ |
 | Hesabın silinməsi | `DELETE /auth/account` | ✅ |
-| Push **göndərilməsi** | — | ⏸ Firebase çıxarılıb; backend də göndərmirdi |
+| Push **göndərilməsi** | OneSignal | ✅ backend `NotificationService` → `OneSignalService` |
 | Admin panel | — | ❌ API-də admin endpoint-i yoxdur |
 
 ### Biznes qaydaları
@@ -252,9 +252,9 @@ flutter test
 
 ## Növbəti addımlar
 
-1. **Push göndərilməsi** — API.md §13-ə görə backend hələ FCM mesajı göndərmir.
-   Klient tərəf hazırdır: token qeydiyyatı (`POST /me/device-tokens`), local
-   notifications və deep-link. Server işə düşəndə payload strukturu dəyişmir.
+1. **OneSignal REST açarı** — backend `.env`-də `ONESIGNAL_REST_API_KEY` boş
+   qaldıqca push getmir (bildiriş sətri yenə yazılır). Panel: Settings →
+   Keys & IDs.
 2. **Admin panel** — API-də admin endpoint-i yoxdur. `/me`-dəki `is_admin`
    bayrağı oxunur, amma istifadə olunacaq ekran yoxdur.
 3. **Xəritə inteqrasiyası** — `pickup_point` / `dropoff_point` hazırda sərbəst
