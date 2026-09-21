@@ -1,7 +1,10 @@
 /// Compile-time / launch-time configuration.
 abstract final class AppConfig {
-  static const String appVersion = '1.0.0';
-  static const String buildNumber = '1';
+  // No `appVersion`/`buildNumber` constants here. They drifted from
+  // `pubspec.yaml` the first time someone bumped the build without editing
+  // this file, and the force-update gate now decides whether the app opens
+  // at all from that number — so it is read from the binary instead. See
+  // `core/services/app_version_info.dart`.
 
   /// Root of the REST API described in `API.md`.
   ///

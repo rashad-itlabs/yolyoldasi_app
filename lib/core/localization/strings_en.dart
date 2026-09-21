@@ -527,4 +527,16 @@ const Map<String, String> kStringsEn = {
       'You stay on the side you pick here. Sign out and back in to change it.',
   'driverModeNeedsVehicle':
       'Driver mode needs a car. Without one the app opens in passenger mode and moves you across the moment you add one under Profile → Vehicle.',
+
+  // ------------------------------------------------------------- app update
+  'updateRequiredTitle': 'Update required',
+  'updateRequiredBody':
+      'This version is no longer supported. Update the app to carry on.',
+  'updateOptionalTitle': 'A new version is ready',
+  'updateOptionalBody':
+      'Improvements and fixes are waiting. Updating takes a few seconds.',
+  'updateNow': 'Update',
+  'updateLater': 'Later',
+  'updateStoreUnavailable':
+      'We could not open the store. Look for the update there yourself.',
 };

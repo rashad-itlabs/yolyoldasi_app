@@ -8,6 +8,7 @@ import '../core/localization/app_localizations.dart';
 import '../core/router/app_router.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/layout_size.dart';
+import '../features/app_update/presentation/bloc/app_update/app_update_bloc.dart';
 import '../features/auth/presentation/bloc/phone_sign_in/phone_sign_in_bloc.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/bookings/domain/repositories/booking_repository.dart';
@@ -71,6 +72,18 @@ class YolYoldasiApp extends StatelessWidget {
           BlocProvider<PhoneSignInBloc>(
             create: (_) => PhoneSignInBloc(auth: dependencies.auth),
           ),
+          // Asked straight away, before anything waits on it: the answer
+          // decides whether the rest of the app is reachable at all, and a
+          // slow reply must not hold the splash screen hostage — an
+          // unanswered check simply leaves the app open.
+          BlocProvider<AppUpdateBloc>(
+            create: (_) =>
+                AppUpdateBloc(
+                  updates: dependencies.updates,
+                  settings: dependencies.settings,
+                  installed: dependencies.version,
+                )..add(const AppUpdateChecked()),
+          ),
           BlocProvider<SettingsBloc>(
             create: (_) => SettingsBloc(
               settings: dependencies.settings,
@@ -116,7 +129,10 @@ class _AppView extends StatefulWidget {
 }
 
 class _AppViewState extends State<_AppView> {
-  late final GoRouter _router = buildRouter(context.read<SessionBloc>());
+  late final GoRouter _router = buildRouter(
+    session: context.read<SessionBloc>(),
+    update: context.read<AppUpdateBloc>(),
+  );
 
   @override
   void dispose() {

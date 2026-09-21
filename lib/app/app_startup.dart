@@ -12,6 +12,7 @@ import '../core/services/push/pending_deep_link.dart';
 import '../core/services/push/push_message.dart';
 import '../core/services/push/push_service.dart';
 import '../core/widgets/app_feedback.dart';
+import '../features/app_update/presentation/bloc/app_update/app_update_bloc.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/cities/presentation/bloc/cities_bloc.dart';
 import '../features/notifications/domain/entities/app_notification.dart';
@@ -97,8 +98,6 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final session = context.read<SessionBloc>();
-
     if (state != AppLifecycleState.resumed) {
       // Off screen, Dart stops running anyway — but leaving the timer armed
       // would fire a burst of catch-up requests the moment the app returns.
@@ -107,6 +106,14 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
       _watcher.pause();
       return;
     }
+
+    // Ahead of everything below, and outside the signed-in check that guards
+    // it: a release can be withdrawn while the app sits in the background,
+    // and an app left open for a week would otherwise never hear about it.
+    // One small request per resume.
+    context.read<AppUpdateBloc>().add(const AppUpdateChecked());
+
+    final session = context.read<SessionBloc>();
 
     // Coming back from the background is when the client knows its data may be
     // stale. It is also the only recovery path for a device that was

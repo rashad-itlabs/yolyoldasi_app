@@ -13,6 +13,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   ThemeMode _themeMode = ThemeMode.system;
   String? _languageCode;
   bool _onboardingSeen = false;
+  String? _dismissedUpdateVersion;
 
   @override
   Future<void> load() async {
@@ -20,6 +21,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
     final code = _prefs.getString(PrefKeys.languageCode);
     _languageCode = AppLanguages.isSupported(code) ? code : null;
     _onboardingSeen = _prefs.getBool(PrefKeys.onboardingSeen) ?? false;
+    _dismissedUpdateVersion = _prefs.getString(PrefKeys.dismissedUpdate);
   }
 
   ThemeMode _readThemeMode() {
@@ -63,9 +65,24 @@ class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   @override
+  String? get dismissedUpdateVersion => _dismissedUpdateVersion;
+
+  @override
+  Future<void> setDismissedUpdateVersion(String? version) async {
+    _dismissedUpdateVersion = version;
+    if (version == null) {
+      await _prefs.remove(PrefKeys.dismissedUpdate);
+    } else {
+      await _prefs.setString(PrefKeys.dismissedUpdate, version);
+    }
+  }
+
+  @override
   Future<void> clearForSignOut() async {
-    // The theme is a device preference and survives; the language does not,
-    // because the next account carries its own `language_code`.
+    // The theme is a device preference and survives, as does the dismissed
+    // update — which build this phone has is not a fact about who is signed
+    // in. The language does not, because the next account carries its own
+    // `language_code`.
     _languageCode = null;
     await _prefs.remove(PrefKeys.languageCode);
   }

@@ -78,6 +78,20 @@ abstract final class AppLinks {
   static const String termsUrl = 'https://yolyoldasi.az/terms-of-use';
   static const String privacyUrl = 'https://yolyoldasi.az/privacy-policy';
   static const String helpUrl = 'https://yolyoldasi.az/contact';
+
+  /// Where the update screen sends the user when the server names no store
+  /// URL of its own (`GET /app-version`).
+  ///
+  /// The Play listing is addressed by application id, so it is known before
+  /// the app ships. The App Store is not — a listing is reachable only by the
+  /// numeric id Apple assigns at first submission — so iOS falls back to a
+  /// search. Set the real link in the admin panel once the app is live;
+  /// dropping a user on a search results page is a stopgap, not the plan.
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=yolyoldasi.az';
+
+  static const String appStoreSearchUrl =
+      'https://apps.apple.com/az/search?term=Yol%20Yolda%C5%9F%C4%B1';
 }
 
 /// Keys for device-local values in `SharedPreferences`.
@@ -89,4 +103,10 @@ abstract final class PrefKeys {
   static const themeMode = 'pref_theme_mode';
   static const languageCode = 'pref_language_code';
   static const onboardingSeen = 'pref_onboarding_seen';
+
+  /// The release the user last answered "later" to, so an *optional* update
+  /// prompt asks once per release rather than on every launch. Keyed by the
+  /// version rather than a bare flag: the next release must be free to ask
+  /// again. A forced update ignores this entirely — there is no "later".
+  static const dismissedUpdate = 'pref_dismissed_update_version';
 }

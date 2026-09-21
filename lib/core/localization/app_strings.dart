@@ -642,6 +642,27 @@ class AppStrings {
   String get plateVisibleToYou => _get('plateVisibleToYou');
   String get routeNotEditable => _get('routeNotEditable');
 
+  // ------------------------------------------------------------- app update
+  String get updateRequiredTitle => _get('updateRequiredTitle');
+  String get updateRequiredBody => _get('updateRequiredBody');
+  String get updateOptionalTitle => _get('updateOptionalTitle');
+  String get updateOptionalBody => _get('updateOptionalBody');
+  String get updateNow => _get('updateNow');
+  String get updateLater => _get('updateLater');
+  String get updateStoreUnavailable => _get('updateStoreUnavailable');
+
+  String updateNewVersion(String version) => switch (languageCode) {
+    'ru' => 'Новая версия $version',
+    'en' => 'New version $version',
+    _ => 'Yeni versiya $version',
+  };
+
+  String updateMinVersion(String version) => switch (languageCode) {
+    'ru' => 'Минимальная версия: $version',
+    'en' => 'Minimum version: $version',
+    _ => 'Minimum tələb olunan versiya: $version',
+  };
+
   String rateWithName(String name) => switch (languageCode) {
     'ru' => 'Оцените: $name',
     'en' => 'Rate $name',

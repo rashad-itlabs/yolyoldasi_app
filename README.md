@@ -90,6 +90,24 @@ Köhnəlibsə problem deyil — `GET /me` 401 qaytarır və tətbiq giriş ekran
 istifadəçini giriş ekranına qaytarır (§16.2). `/auth/phone/*` istisnadır — orada
 hələ sessiya yoxdur, ona görə interceptor-un `_publicPaths` siyahısındadır.
 
+### Yeniləmə divarı
+
+Bu axının **qarşısında** dayanır. Tətbiq açılanda və fondan qayıdanda
+`GET /app-version` soruşur (§17); cavab `required` olanda `AppGuard` bütün
+ünvanları `/update`-ə yönəldir — giriş ekranını da. `optional` olanda tab
+qabığının üstündə keçiləbilən vərəq açılır və cavab buraxılış başına bir dəfə
+soruşulur.
+
+Qərarı server verir, klient müqayisə etmir: minimum versiyanı qaldırmaq üçün
+admin panelindəki **Tətbiq versiyası** səhifəsi kifayətdir, yeni buraxılış
+lazım deyil.
+
+Bir prinsip hər yerdə keçərlidir — **şübhə olanda yol ver**. Sorğu alınmasa,
+cavab tanınmasa, yaxud cədvəldə sətir olmasa, tətbiq açıq qalır. Cari build
+`pubspec.yaml`-dan yox, `package_info_plus` ilə binar fayldan oxunur
+(`core/services/app_version_info.dart`) — çünki əl ilə saxlanan sabit sürüşən
+kimi tətbiq öz istifadəçilərini bayırda qoyardı.
+
 ---
 
 ## Arxitektura
@@ -202,6 +220,7 @@ həll olunub — hər biri kodda şərhlə qeyd edilib:
 | Hesabın silinməsi | `DELETE /auth/account` | ✅ |
 | Push **göndərilməsi** | OneSignal | ✅ backend `NotificationService` → `OneSignalService` |
 | Admin panelindən elan | `adminMessage` / `adminMarketing` | ✅ API.md §13 |
+| Məcburi / könüllü yeniləmə | `GET /app-version` | ✅ API.md §17 |
 | Admin panel | — | ❌ API-də admin endpoint-i yoxdur |
 
 ### Biznes qaydaları
@@ -247,6 +266,12 @@ flutter test
   `PATCH`-də explicit null-un qorunması
 - `test/localization_test.dart` — üç dilin açar uyğunluğu, cəm formaları
 - `test/brand_mark_test.dart` — logonun kvadrat qalması
+- `test/app_update_gate_test.dart` — §17-nin cavablarının oxunması və
+  **əlçatmaz serverin tətbiqi bağlamaması**; könüllü xəbərdarlığın buraxılış
+  başına bir dəfə soruşulması
+- `test/app_update_router_test.dart` — `AppGuard`: məcburi yeniləmə zamanı
+  bütün digər ünvanların `/update`-ə yönəlməsi, blokun olmadığı halda isə
+  heç birinin yönəlməməsi
 
 ---
 

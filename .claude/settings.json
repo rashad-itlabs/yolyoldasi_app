@@ -164,12 +164,22 @@
       "Bash(python3 - /private/tmp/claude-501/-Users-rashadaliyev-StudioProjects-yolyoldasi/3ef2cb14-d2c7-47ce-870a-ae7b4841e82c/scratchpad)",
       "Bash(python3 -c \"import PIL; print\\('PIL', PIL.__version__\\)\")",
       "Read(//Users/rashadaliyev/Documents/developer/yolyoldasi/app/Services/**)",
-      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && sed -n '675,770p' docs/API.md)"
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && sed -n '675,770p' docs/API.md)",
+      "Bash(pkill -f \"[f]lutter_tester\")",
+      "Bash(pkill -f \"bkxjgtu5l\")",
+      "Bash(perl -e 'alarm 150; exec @ARGV' flutter test test/probe_test.dart)",
+      "Bash(grep -v \"^$\")",
+      "Bash(perl -e 'alarm 120; exec @ARGV' flutter test test/probe_test.dart)",
+      "Bash(perl -e 'alarm 150; exec @ARGV' flutter test test/app_update_router_test.dart test/app_update_gate_test.dart)",
+      "Bash(perl -e 'alarm 400; exec @ARGV' flutter test)",
+      "Read(//Users/rashadaliyev/Documents/developer/yolyoldasi/app/Http/Controllers/Admin/**)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && echo \"=== API CTRL ===\" && cat app/Http/Controllers/Api/AppVersionController.php | sed -n '28,70p' && echo \"=== MODEL tail ===\" && sed -n '50,80p' app/Models/AppVersion.php && echo \"=== ROUTES api ===\" && sed -n '19,40p' routes/api.php && echo \"=== ROUTES admin ===\" && grep -n -B2 -A3 \"app-version\" routes/admin.php)"
     ],
     "additionalDirectories": [
       "/Users/rashadaliyev/Documents/developer/yolyoldasi/config",
       "/Users/rashadaliyev/Documents/developer/yolyoldasi/app/Services",
-      "/Users/rashadaliyev/Documents/developer/yolyoldasi/app/Models"
+      "/Users/rashadaliyev/Documents/developer/yolyoldasi/app/Models",
+      "/Users/rashadaliyev/Documents/developer/yolyoldasi/resources/views/admin/content"
     ]
   }
 }

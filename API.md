@@ -761,3 +761,60 @@ fərqlənmirlər. Ayrıca endpoint yoxdur.
 6. **Fayl yükləmələri** `multipart/form-data` — `Content-Type` başlığını əl ilə
    qoyma, Dio özü boundary ilə birlikdə təyin edir.
 7. **Səhifələmə** — `meta.current_page < meta.last_page` olduqca `?page=N` ilə davam et.
+
+---
+
+## 17. Tətbiq versiyası (məcburi yeniləmə)
+
+### GET `/app-version` — açıq
+
+Tətbiq hər açılışda və fondan qayıdanda soruşur. **Açıqdır**: yeniləmə divarı
+giriş ekranından da əvvəl qalxmalıdır, ona görə token tələb etmir.
+
+| Parametr | Qayda |
+|---|---|
+| `platform` | `android` \| `ios` |
+| `build` | tam ədəd — Android `versionCode`, iOS `CFBundleVersion` |
+| `version` | ixtiyari, yalnız jurnal üçün (`1.0.0`) |
+| `lang` | `az` \| `ru` \| `en`, standart `az` |
+
+Qərarı **server verir**. Klient `status` sahəsinə baxır və müqayisə etmir —
+beləliklə qaydanı dəyişmək üçün mağazaya yeni buraxılış göndərmək lazım gəlmir.
+
+```json
+{ "data": {
+  "status": "required",
+  "min_build": 8,
+  "min_version": "1.1.0",
+  "latest_build": 12,
+  "latest_version": "1.2.0",
+  "store_url": "https://play.google.com/store/apps/details?id=yolyoldasi.az",
+  "message": "Köhnə versiya artıq dəstəklənmir."
+}}
+```
+
+| `status` | Şərt | Tətbiqin davranışı |
+|---|---|---|
+| `required` | `build < min_build` | Ekran tam bloklanır, yalnız mağazaya keçid |
+| `optional` | `min_build ≤ build < latest_build` | Keçiləbilən vərəq — “Yenilə” / “Sonra” |
+| `ok` | `build ≥ latest_build` | Heç nə göstərilmir |
+
+`ok` cavabı yalnız `status` daşıyır — göstəriləsi ekran olmadığı üçün qalan
+sahələr qaytarılmır.
+
+Dəyərlər `app_versions` cədvəlindədir (platforma başına bir sətir) və admin
+panelinin **Tətbiq versiyası** səhifəsindən dəyişdirilir.
+
+### Şübhə olanda yol ver
+
+Endpoint aşağıdakı hallarda **`ok`** qaytarır — səhv bir cavabın nəticəsi
+istifadəçinin tətbiqə ümumiyyətlə girə bilməməsidir:
+
+- naməlum və ya boş `platform`;
+- cədvəldə həmin platforma üçün sətir yoxdur;
+- sətir var, amma `is_enabled = false`;
+- `build` oxunmur və ya 1-dən kiçikdir.
+
+Klient tərəfində eyni prinsip: sorğu alınmasa, cavab parse olunmasa, yaxud
+`status` tanınmayan bir söz olsa — tətbiq açıq qalır. Serverin əlçatmaz olması
+tətbiqin köhnə olduğuna dəlil deyil.

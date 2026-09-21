@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/config/app_config.dart';
+import '../../../../core/di/app_dependencies.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_dimens.dart';
@@ -213,7 +213,8 @@ class ProfilePage extends StatelessWidget {
                 VGap.xxl,
                 Center(
                   child: Text(
-                    '${l10n.version} ${AppConfig.appVersion}',
+                    '${l10n.version} '
+                    '${context.read<AppDependencies>().version.display}',
                     style: context.text.labelSmall?.copyWith(
                       color: palette.textTertiary,
                     ),

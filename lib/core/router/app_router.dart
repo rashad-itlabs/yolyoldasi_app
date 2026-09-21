@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/app_update/presentation/bloc/app_update/app_update_bloc.dart';
+import '../../features/app_update/presentation/pages/update_required_page.dart';
 import '../../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../../features/auth/presentation/pages/blocked_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -31,6 +33,7 @@ import '../../features/shell/presentation/pages/home_tab.dart';
 import '../extensions/context_extensions.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_states.dart';
+import 'app_guard.dart';
 import 'app_routes.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -39,16 +42,17 @@ final _bookingsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'bookings');
 final _chatNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'chat');
 final _profileNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
-/// Routes that are only reachable while signed out.
-const _authRoutes = {Routes.splash, Routes.onboarding, Routes.login};
-
-/// Builds the router around [session].
+/// Builds the router around [session] and [update].
 ///
-/// The redirect reads the session's current state, and [_SessionRefresh]
-/// re-runs it whenever that state changes — which is how signing in or out
+/// The guard itself lives in [AppGuard]; this only feeds it the current state
+/// of both blocs. [_GuardRefresh] re-runs it whenever either changes — which
+/// is how signing in, signing out, or a forced update landing mid-session
 /// moves the user without any screen calling `go` itself.
-GoRouter buildRouter(SessionBloc session) {
-  final refresh = _SessionRefresh(session);
+GoRouter buildRouter({
+  required SessionBloc session,
+  required AppUpdateBloc update,
+}) {
+  final refresh = _GuardRefresh(session: session, update: update);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -57,35 +61,11 @@ GoRouter buildRouter(SessionBloc session) {
     debugLogDiagnostics: false,
 
     // ------------------------------------------------------------------ guard
-    redirect: (context, state) {
-      final current = session.state;
-      final location = state.matchedLocation;
-
-      switch (current.status) {
-        case SessionStatus.booting:
-          return location == Routes.splash ? null : Routes.splash;
-
-        case SessionStatus.signedOut:
-          if (!current.onboardingSeen) {
-            return location == Routes.onboarding ? null : Routes.onboarding;
-          }
-          return location == Routes.login ? null : Routes.login;
-
-        case SessionStatus.needsProfile:
-          return location == Routes.profileSetup ? null : Routes.profileSetup;
-
-        case SessionStatus.blocked:
-          return location == Routes.blocked ? null : Routes.blocked;
-
-        case SessionStatus.ready:
-          if (_authRoutes.contains(location) ||
-              location == Routes.profileSetup ||
-              location == Routes.blocked) {
-            return Routes.home;
-          }
-          return null;
-      }
-    },
+    redirect: (context, state) => AppGuard.redirect(
+      session: session.state,
+      updateBlocks: update.state.blocks,
+      location: state.matchedLocation,
+    ),
 
     errorBuilder: (context, state) => AppScaffold(
       title: context.l10n.errorTitle,
@@ -105,6 +85,10 @@ GoRouter buildRouter(SessionBloc session) {
         builder: (_, _) => const ProfileSetupPage(),
       ),
       GoRoute(path: Routes.blocked, builder: (_, _) => const BlockedPage()),
+      GoRoute(
+        path: Routes.updateRequired,
+        builder: (_, _) => const UpdateRequiredPage(),
+      ),
 
       // ------------------------------------------------------------- shell
       StatefulShellRoute.indexedStack(
@@ -256,15 +240,19 @@ GoRouter buildRouter(SessionBloc session) {
   );
 }
 
-/// Bridges [SessionBloc] to go_router's [Listenable]-based refresh.
+/// Bridges [SessionBloc] and [AppUpdateBloc] to go_router's [Listenable]-based
+/// refresh.
 ///
 /// Only the fields the redirect actually reads trigger a re-evaluation — a
-/// profile edit or a badge count changing must not re-run the guard.
-class _SessionRefresh extends ChangeNotifier {
-  _SessionRefresh(SessionBloc session) {
+/// profile edit, a badge count, or an *optional* update arriving must not
+/// re-run the guard.
+class _GuardRefresh extends ChangeNotifier {
+  _GuardRefresh({required SessionBloc session, required AppUpdateBloc update}) {
     _status = session.state.status;
     _onboardingSeen = session.state.onboardingSeen;
-    _subscription = session.stream.listen((state) {
+    _blocked = update.state.blocks;
+
+    _session = session.stream.listen((state) {
       if (state.status == _status && state.onboardingSeen == _onboardingSeen) {
         return;
       }
@@ -272,15 +260,25 @@ class _SessionRefresh extends ChangeNotifier {
       _onboardingSeen = state.onboardingSeen;
       notifyListeners();
     });
+
+    _update = update.stream.listen((state) {
+      if (state.blocks == _blocked) return;
+      _blocked = state.blocks;
+      notifyListeners();
+    });
   }
 
   late SessionStatus _status;
   late bool _onboardingSeen;
-  late final StreamSubscription<SessionState> _subscription;
+  late bool _blocked;
+
+  late final StreamSubscription<SessionState> _session;
+  late final StreamSubscription<AppUpdateState> _update;
 
   @override
   void dispose() {
-    _subscription.cancel();
+    _session.cancel();
+    _update.cancel();
     super.dispose();
   }
 }

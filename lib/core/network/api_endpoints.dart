@@ -24,6 +24,11 @@ abstract final class Api {
   // ------------------------------------------------------------------- cities
   static const cities = '/cities';
 
+  // -------------------------------------------------------------- app version
+  /// Public, and deliberately so: the update wall has to be able to stand in
+  /// front of the sign-in screen.
+  static const appVersion = '/app-version';
+
   // ------------------------------------------------------------------- driver
   static const driverProfile = '/driver/profile';
   static const driverDocuments = '/driver/documents';

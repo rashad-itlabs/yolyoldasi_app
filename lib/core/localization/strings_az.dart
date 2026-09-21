@@ -524,4 +524,16 @@ const Map<String, String> kStringsAz = {
       'Bu seçimlə davam edəcəksən. Dəyişmək üçün hesabdan çıxıb yenidən daxil ol.',
   'driverModeNeedsVehicle':
       'Sürücü rejimi üçün avtomobil lazımdır. Hesabında avtomobil yoxdursa, tətbiq sərnişin rejimində açılacaq — Profil → Avtomobil bölməsindən əlavə etdiyin an sürücü rejiminə keçəcək.',
+
+  // ------------------------------------------------------- tətbiq yeniləməsi
+  'updateRequiredTitle': 'Yeniləmə tələb olunur',
+  'updateRequiredBody':
+      'Bu versiya artıq dəstəklənmir. Davam etmək üçün tətbiqi yeniləyin.',
+  'updateOptionalTitle': 'Yeni versiya hazırdır',
+  'updateOptionalBody':
+      'Yeniliklər və düzəlişlər səni gözləyir. Yeniləmək bir neçə saniyə çəkir.',
+  'updateNow': 'Yenilə',
+  'updateLater': 'Sonra',
+  'updateStoreUnavailable':
+      'Mağazanı aça bilmədik. Yeniləməni mağazada əl ilə axtar.',
 };

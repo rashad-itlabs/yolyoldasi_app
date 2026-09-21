@@ -759,6 +759,12 @@ class _FakeSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> clearForSignOut() async {}
+
+  @override
+  String? get dismissedUpdateVersion => null;
+
+  @override
+  Future<void> setDismissedUpdateVersion(String? version) async {}
 }
 
 /// Records every request so a test can assert on one that is not the last.

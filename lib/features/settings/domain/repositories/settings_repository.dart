@@ -23,6 +23,14 @@ abstract interface class SettingsRepository {
   bool get onboardingSeen;
   Future<void> setOnboardingSeen(bool seen);
 
+  /// The release the user last answered "later" to on an *optional* update
+  /// prompt, so it asks once per release instead of on every launch.
+  ///
+  /// Belongs to the handset rather than the account: whether this phone has
+  /// the new build is not a fact about whoever is signed in.
+  String? get dismissedUpdateVersion;
+  Future<void> setDismissedUpdateVersion(String? version);
+
   /// Clears everything except [onboardingSeen] — a user who signs out has
   /// still seen the intro.
   Future<void> clearForSignOut();

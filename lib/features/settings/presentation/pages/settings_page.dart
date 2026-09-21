@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/di/app_dependencies.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/app_dimens.dart';
@@ -149,7 +149,7 @@ class SettingsPage extends StatelessWidget {
                   ProfileTile(
                     icon: Icons.info_outline_rounded,
                     label: l10n.aboutApp,
-                    value: AppConfig.appVersion,
+                    value: context.read<AppDependencies>().version.display,
                     onTap: null,
                   ),
                 ],

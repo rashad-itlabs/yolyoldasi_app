@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
+import '../../../app_update/presentation/widgets/optional_update_gate.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../bloc/badges/badges_bloc.dart';
 
@@ -19,7 +20,10 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      // The soft update prompt, if one is owed. Here rather than in
+      // `AppStartup` because a modal sheet needs a Navigator above it, and
+      // this is the first screen worth interrupting anyway.
+      body: OptionalUpdateGate(child: navigationShell),
       // Four destinations spread across a 13-inch screen end up so far apart
       // that the bar stops reading as one control, so they are held to the
       // same column width as the content above them.

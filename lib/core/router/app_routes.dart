@@ -11,6 +11,10 @@ abstract final class Routes {
   static const profileSetup = '/profile-setup';
   static const blocked = '/blocked';
 
+  /// The forced-update wall. Outranks every other destination, including the
+  /// sign-in screen — see the guard in `app_router.dart`.
+  static const updateRequired = '/update';
+
   // Shell tabs
   static const home = '/home';
   static const bookings = '/bookings';

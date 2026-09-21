@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+4
+version: 1.0.0+5
 
 environment:
   sdk: ^3.10.4
@@ -58,6 +58,13 @@ dependencies:
   image_picker: ^1.2.3
   flutter_animate: ^4.5.2
   shimmer: ^3.0.0
+
+  # The version this build actually is, read from the platform at launch.
+  # The force-update gate compares it against what the server demands, so a
+  # hand-maintained constant would be a bug waiting to happen: the number that
+  # decides whether the app opens must come from the binary, not from a file
+  # someone has to remember to edit.
+  package_info_plus: ^9.0.1
 
   # Notification channels, the Android 13 permission prompt, and drawing the
   # notification while the app is in the foreground — which FCM does not do.
