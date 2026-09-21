@@ -33,6 +33,12 @@ abstract final class Routes {
   // Search
   static const searchResults = '/search';
 
+  // Ride requests — the demand side of the marketplace
+  static const rideRequests = '/ride-requests';
+  static const rideRequestsIncoming = '/ride-requests/incoming';
+  static String rideRequestDetail(int id) => '/ride-requests/$id';
+  static const rideRequestDetailPath = ':requestId';
+
   // Bookings
   static String bookingDetail(int id) => '/bookings/$id';
   static const bookingDetailPath = ':bookingId';
@@ -52,6 +58,8 @@ abstract final class Routes {
   static const documentsPath = 'documents';
   static const myReviews = '/profile/reviews';
   static const myReviewsPath = 'reviews';
+  static const referral = '/profile/referral';
+  static const referralPath = 'referral';
 
   // Reviews
   static String writeReview(int bookingId) => '/review/$bookingId';

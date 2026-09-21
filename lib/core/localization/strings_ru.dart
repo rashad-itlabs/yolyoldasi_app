@@ -232,8 +232,8 @@ const Map<String, String> kStringsRu = {
   'night': 'Ночь',
   'onlyVerified': 'Только проверенные водители',
   'noRidesFound': 'На этом маршруте поездок нет',
-  'noRidesFoundBody': 'Попробуйте изменить дату или настроить уведомление.',
-  'recentSearches': 'Недавние поиски',
+  'noRidesFoundBody':
+      'Измените дату или создайте запрос на этот маршрут — мы покажем его водителям.',
   'popularRoutes': 'Популярные маршруты',
   'allActiveRides': 'Все активные поездки',
   'noActiveRides': 'Сейчас активных поездок нет',
@@ -522,7 +522,7 @@ const Map<String, String> kStringsRu = {
       'Сервер возвращает код прямо в ответе. Нажмите — он подставится в поля.',
   'chooseModeTitle': 'Как продолжить?',
   'chooseModeBody':
-      'Вы продолжите в выбранном режиме. Чтобы сменить его, выйдите и войдите заново.',
+      'С этого режима вы начнёте. Сменить его можно в любой момент в разделе «Профиль».',
   'driverModeNeedsVehicle':
       'Для режима водителя нужен автомобиль. Без него приложение откроется в режиме пассажира и переключится само, как только вы добавите машину в «Профиль → Автомобиль».',
 
@@ -537,4 +537,117 @@ const Map<String, String> kStringsRu = {
   'updateLater': 'Позже',
   'updateStoreUnavailable':
       'Не удалось открыть магазин. Найдите обновление в нём вручную.',
+
+  // --------------------------------------------------- рост и маркетплейс
+  'rideRequests': 'Запросы поездок',
+  'myRideRequests': 'Мои запросы',
+  'createRideRequest': 'Создать запрос на этот маршрут',
+  'createRideRequestTitle': 'Что вы ищете?',
+  'createRideRequestBody':
+      'Укажите маршрут — мы покажем его водителям. Как только появится поездка, вы получите уведомление.',
+  'rideRequestCreated': 'Водители увидят ваш запрос',
+  'rideRequestCreatedBody':
+      'Мы сообщим, как только на этом маршруте появится поездка.',
+  'rideRequestCancelled': 'Запрос закрыт',
+  'rideRequestCancel': 'Закрыть запрос',
+  'rideRequestCancelConfirm': 'Закрыть этот запрос?',
+  'rideRequestMatches': 'Подходящие поездки',
+  'rideRequestNoMatches': 'Подходящих поездок пока нет',
+  'rideRequestNoMatchesBody':
+      'Мы сообщили водителям. Вы получите уведомление, как только появится поездка.',
+  'noRideRequests': 'У вас нет открытых запросов',
+  'noRideRequestsBody':
+      'Если поездки на маршруте нет — создайте запрос, и водители его увидят.',
+  'incomingRideRequests': 'Ищут место на вашем маршруте',
+  'incomingRideRequestsBody':
+      'Эти пассажиры ищут место там, где вы ездите. Разместите объявление.',
+  'noIncomingRideRequests': 'Сейчас открытых запросов нет',
+  'noIncomingRideRequestsBody':
+      'Здесь появятся пассажиры, ищущие место на вашем маршруте.',
+  'flexibleDays': 'Гибкость по датам',
+  'flexibleDaysExact': 'Точная дата',
+  'wantedDate': 'Дата поездки',
+  'requestNoteHint': 'Сообщение водителю (необязательно)',
+  'publishForThisRequest': 'Разместить поездку',
+  'rideRequestStatusOpen': 'Ожидает',
+  'rideRequestStatusFulfilled': 'Поездка найдена',
+  'rideRequestStatusCancelled': 'Закрыт',
+  'rideRequestStatusExpired': 'Просрочен',
+  'demandTitle': 'Спрос на маршруте',
+  'demandEmpty': 'На этом маршруте пока мало активности',
+  'topRoutesTitle': 'Самые востребованные маршруты',
+  'topRoutesBody': 'Здесь спрос выше предложения.',
+  'demandPublishCta': 'Разместить',
+  'earningsTitle': 'Ваш заработок',
+  'earningsFuelNote': 'Примерные расходы на топливо',
+  'earningsFree': 'Без комиссии — весь заработок ваш.',
+  'suggestedPrice': 'Рекомендуемая цена',
+  'suggestedPriceHistory': 'Медиана по этому маршруту',
+  'suggestedPriceDistance': 'Оценка по расстоянию',
+  'usePrice': 'Выбрать эту цену',
+  'womenOnly': 'Только для женщин',
+  'womenOnlyRide': 'Только женщины-пассажиры',
+  'womenOnlyHint':
+      'Бронировать смогут только женщины. Опция доступна женщинам-водителям.',
+  'womenOnlyBlocked': 'Эта поездка только для женщин-пассажиров.',
+  'filterDriverGender': 'Пол водителя',
+  'filterDriverAny': 'Не важно',
+  'filterDriverFemale': 'Женщина',
+  'filterDriverMale': 'Мужчина',
+  'filterInstantOnly': 'Только мгновенная бронь',
+  'filterVerifiedOnly': 'Только проверенные водители',
+  'filterWomenOnly': 'Только женские поездки',
+  'filterServerNote':
+      'Эти фильтры применяются на сервере — список загрузится заново.',
+  'verifiedDriver': 'Проверенный водитель',
+  'tierTrusted': 'Надёжный водитель',
+  'tierRising': 'Растущий водитель',
+  'verifyBoostHint':
+      'Объявления водителей с проверенными документами бронируют чаще.',
+  'repeatRide': 'Повторить объявление',
+  'repeatRideTitle': 'Повторить эту поездку',
+  'repeatRideBody': 'Маршрут, цена и число мест останутся прежними.',
+  'repeatWeeks': 'Сколько недель',
+  'repeatWeeksOnce': 'Только один раз',
+  'repeatCreated': 'Объявление размещено',
+  'shareRide': 'Поделиться поездкой',
+  'shareRideUnavailable': 'У этой поездки нет ссылки',
+  'referral': 'Пригласить друга',
+  'referralTitle': 'Приглашайте — ваши поездки будут выше',
+  'referralBody':
+      'Когда приглашённый совершит первую поездку, ваши объявления неделю будут вверху поиска.',
+  'referralCode': 'Ваш код',
+  'referralInvited': 'Приглашено',
+  'referralActive': 'Совершили поездку',
+  'referralBoostActive': 'Ваши объявления вверху',
+  'referralBoostUntil': 'Действует до',
+  'referralShare': 'Поделиться кодом',
+  'referralShareText':
+      'Ездите между городами с Yol Yoldaşı. Введите мой код при регистрации:',
+  'referralCodeHint': 'Код приглашения (необязательно)',
+  'switchMode': 'Сменить режим',
+  'switchToDriver': 'Перейти в режим водителя',
+  'switchToPassenger': 'Перейти в режим пассажира',
+  'switchModeConfirmDriver':
+      'Вы переходите в режим водителя: сможете размещать поездки и принимать брони.',
+  'switchModeConfirmPassenger':
+      'Вы переходите в режим пассажира: сможете искать поездки и бронировать места.',
+  'switchModeDone': 'Режим изменён',
+  'becomeDriverTitle': 'Вы тоже можете стать водителем',
+  'becomeDriverBody':
+      'Едете в район? Поделитесь свободными местами и сократите расходы. Без комиссии.',
+  'signInToContinue': 'Войдите, чтобы продолжить',
+  'signInToBook': 'Войдите, чтобы забронировать место',
+  'signInToRequest': 'Войдите, чтобы создать запрос',
+  'browseAsGuest': 'Сначала посмотреть поездки',
+  'signIn': 'Войти',
+  'errDriverProfileRequired':
+      'Чтобы перейти в режим водителя, сначала добавьте автомобиль.',
+  'errWomenOnlyRide': 'Эта поездка только для женщин-пассажиров.',
+  'notifRideRequestMatchedTitle': 'Появилась поездка по вашему маршруту',
+  'notifRideRequestPostedTitle': 'На вашем маршруте ищут место',
+  'skipSignIn': 'Не сейчас',
+  'askDriversTitle': 'Не нашли поездку?',
+  'askDriversBody':
+      'Укажите маршрут — мы покажем его водителям на этом направлении.',
 };

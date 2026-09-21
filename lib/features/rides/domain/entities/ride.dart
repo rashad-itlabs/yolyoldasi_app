@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../profile/domain/entities/app_user.dart';
+import '../../../profile/domain/entities/user_enums.dart';
 import '../../../profile/domain/entities/vehicle.dart';
 
 /// Wire: `active | inactive | completed | cancelled` (API.md §2).
@@ -53,6 +54,9 @@ class Ride extends Equatable {
     this.pickupPoint = '',
     this.dropoffPoint = '',
     this.instantBooking = false,
+    this.womenOnly = false,
+    this.isBoosted = false,
+    this.shareUrl,
     this.isMine = false,
   });
 
@@ -90,6 +94,19 @@ class Ride extends Equatable {
   /// spot (API.md §10).
   final bool instantBooking;
 
+  /// Only women may book this ride. The server enforces it with a 422; the UI
+  /// shows the badge and keeps the button shut, so nobody is sent into a dead
+  /// end (API.md §21).
+  final bool womenOnly;
+
+  /// Lifted to the top of search by a referral reward. Shown on the driver's
+  /// own listing so the reward is visible rather than invisible.
+  final bool isBoosted;
+
+  /// The public page for this ride, `https://<host>/r/{id}`. Null on responses
+  /// from a server that predates it.
+  final String? shareUrl;
+
   /// Whether the signed-in user is the driver. Comes from the server, so the
   /// UI never has to compare ids itself.
   final bool isMine;
@@ -116,8 +133,18 @@ class Ride extends Equatable {
 
   /// The single check the booking flow gates on. `isMine` is part of it because
   /// booking your own ride is a 422 (API.md §10).
+  ///
+  /// [womenOnly] is *not* part of it: whether the viewer qualifies depends on
+  /// their own profile, which a ride cannot see. The booking sheet asks
+  /// [isBookableBy] instead.
   bool get isBookable =>
       status.isActive && !isMine && !isFull && !isPastBookingCutoff;
+
+  /// [isBookable] plus the driver's women-only condition, checked against the
+  /// viewer. A signed-out viewer passes: they are shown the sign-in prompt
+  /// first, and the server has the final say either way.
+  bool isBookableBy(Gender? viewerGender) =>
+      isBookable && (!womenOnly || viewerGender == null || viewerGender.isFemale);
 
   /// Whether [seatCount] seats can still be taken.
   bool canFit(int seatCount) => isBookable && seatsLeft >= seatCount;
@@ -145,6 +172,9 @@ class Ride extends Equatable {
     String? pickupPoint,
     String? dropoffPoint,
     bool? instantBooking,
+    bool? womenOnly,
+    bool? isBoosted,
+    String? Function()? shareUrl,
     bool? isMine,
   }) {
     return Ride(
@@ -164,6 +194,9 @@ class Ride extends Equatable {
       pickupPoint: pickupPoint ?? this.pickupPoint,
       dropoffPoint: dropoffPoint ?? this.dropoffPoint,
       instantBooking: instantBooking ?? this.instantBooking,
+      womenOnly: womenOnly ?? this.womenOnly,
+      isBoosted: isBoosted ?? this.isBoosted,
+      shareUrl: shareUrl != null ? shareUrl() : this.shareUrl,
       isMine: isMine ?? this.isMine,
     );
   }
@@ -186,6 +219,9 @@ class Ride extends Equatable {
     pickupPoint,
     dropoffPoint,
     instantBooking,
+    womenOnly,
+    isBoosted,
+    shareUrl,
     isMine,
   ];
 }

@@ -1,6 +1,5 @@
 import '../../../../core/error/result.dart';
 import '../../../../core/network/api_envelope.dart';
-import '../entities/recent_search.dart';
 import '../entities/ride.dart';
 import '../entities/ride_draft.dart';
 import '../entities/ride_query.dart';
@@ -22,6 +21,13 @@ abstract interface class RideRepository {
   /// `PUT /rides/{id}`.
   FutureResult<Ride> update(int rideId, RideDraft draft);
 
+  /// `POST /rides/{id}/repeat` — the same run on a new date.
+  ///
+  /// The weekly commuter is the driver worth keeping, and making them refill
+  /// the three-step form every Friday is how they get lost. [weeks] publishes
+  /// several at once; the result is the first of them.
+  FutureResult<Ride> repeat(int rideId, DateTime departureAt, {int weeks});
+
   /// Shows or hides a ride in search without cancelling its bookings.
   FutureResult<Ride> setStatus(int rideId, RideStatus status);
 
@@ -33,8 +39,4 @@ abstract interface class RideRepository {
   /// bookings and asks both sides for a review.
   FutureResult<void> complete(int rideId);
 
-  /// `GET /me/recent-searches` — the last ten routes, newest first.
-  FutureResult<List<RecentSearch>> recentSearches();
-
-  FutureResult<void> clearRecentSearches();
 }

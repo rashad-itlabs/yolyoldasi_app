@@ -16,6 +16,18 @@ class PhoneSignInPhoneChanged extends PhoneSignInEvent {
   List<Object?> get props => [phone];
 }
 
+/// An invite code, typed by someone a friend sent here.
+///
+/// Optional, and never blocks anything: a wrong code simply credits nobody.
+class PhoneSignInReferralChanged extends PhoneSignInEvent {
+  const PhoneSignInReferralChanged(this.code);
+
+  final String code;
+
+  @override
+  List<Object?> get props => [code];
+}
+
 /// Driver or passenger, chosen before the code is even requested.
 class PhoneSignInModeChanged extends PhoneSignInEvent {
   const PhoneSignInModeChanged(this.mode);

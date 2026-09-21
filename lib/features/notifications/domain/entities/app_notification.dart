@@ -17,6 +17,14 @@ enum NotificationType {
   documentsApproved,
   documentsRejected,
 
+  /// A ride appeared on a route the passenger had posted a request for
+  /// (API.md §19). Carries `ride_id`, so the tap opens that ride.
+  rideRequestMatched,
+
+  /// Someone is looking for a seat on a route this driver runs (API.md §19).
+  /// Carries no ids — the tap opens the incoming-requests list instead.
+  rideRequestPosted,
+
   /// Written by hand in the admin panel — a service notice.
   adminMessage,
 
@@ -66,6 +74,8 @@ enum NotificationType {
     NotificationType.reviewRequest => 'notifReviewRequestTitle',
     NotificationType.documentsApproved => 'notifDocsApprovedTitle',
     NotificationType.documentsRejected => 'notifDocsRejectedTitle',
+    NotificationType.rideRequestMatched => 'notifRideRequestMatchedTitle',
+    NotificationType.rideRequestPosted => 'notifRideRequestPostedTitle',
     NotificationType.adminMessage => 'notifAdminMessageTitle',
     NotificationType.adminMarketing => 'notifAdminMarketingTitle',
     NotificationType.unknown => 'notifUnknownTitle',
@@ -109,6 +119,15 @@ class _NoTarget extends NotificationTarget {
   const _NoTarget();
 }
 
+/// The driver's incoming ride requests.
+///
+/// The one target that is not an object id: `rideRequestPosted` is about a
+/// route rather than a single row, and sending the driver to one stranger's
+/// request would be narrower than what the notification promised.
+class RideRequestsTarget extends NotificationTarget {
+  const RideRequestsTarget();
+}
+
 /// A single entry in the notification centre — API.md §13.
 class AppNotification extends Equatable {
   const AppNotification({
@@ -145,6 +164,9 @@ class AppNotification extends Equatable {
   /// The most specific destination available, preferring the screen the
   /// notification is actually about.
   NotificationTarget get target {
+    if (type == NotificationType.rideRequestPosted) {
+      return const RideRequestsTarget();
+    }
     if (conversationId != null && type == NotificationType.newMessage) {
       return ConversationTarget(conversationId!);
     }

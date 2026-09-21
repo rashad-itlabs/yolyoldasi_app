@@ -30,9 +30,25 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
+  /// Ends onboarding on the search screen, not the sign-in screen.
+  ///
+  /// The pitch has just been made; the honest next step is showing the goods.
+  /// Asking for a phone number here is asking someone to pay at the door of an
+  /// empty room — it was the single biggest leak in the funnel.
+  ///
+  /// The router's redirect reads `onboardingSeen`, so recording it is enough to
+  /// move on; the explicit `go` only avoids waiting a frame for it.
   void _finish() {
-    // The router's redirect reads `onboardingSeen`, so recording it is enough
-    // to move on; the explicit `go` only avoids waiting a frame for it.
+    context.read<SessionBloc>().add(const SessionOnboardingSeen());
+    context.go(Routes.home);
+  }
+
+  /// The direct way in, for someone who already has an account.
+  ///
+  /// Secondary rather than primary: a returning user knows what they came for
+  /// and will find one button, while a first-time visitor should not have to
+  /// decide anything before seeing a single ride.
+  void _signIn() {
     context.read<SessionBloc>().add(const SessionOnboardingSeen());
     context.go(Routes.login);
   }
@@ -185,6 +201,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             ? null
                             : Icons.arrow_forward_rounded,
                       ),
+                      // Only on the last page: before the pitch is finished
+                      // there is nothing to sign in *for*.
+                      if (_index == _pageCount - 1) ...[
+                        VGap.sm,
+                        AppButton.ghost(
+                          label: l10n.signIn,
+                          onPressed: _signIn,
+                        ),
+                      ],
                     ],
                   ),
                 ),

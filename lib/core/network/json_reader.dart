@@ -60,6 +60,19 @@ extension JsonReader on Json {
     return fallback;
   }
 
+  /// A flag that keeps "the key was not there" apart from "it was false".
+  ///
+  /// Needed where absence carries its own meaning — `is_verified` is omitted
+  /// when the server did not load the relation (API.md §21), and reading that
+  /// as `false` would strip the badge off an approved driver.
+  bool? flagOrNull(String key) {
+    final value = this[key];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) return value == '1' || value == 'true';
+    return null;
+  }
+
   /// ISO 8601 (API.md §1). Falls back to the epoch so a malformed timestamp
   /// sorts last rather than taking the screen down.
   DateTime date(String key, [DateTime? fallback]) =>

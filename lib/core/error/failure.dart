@@ -24,6 +24,14 @@ enum FailureCode {
   selfBooking,
   documentsPending,
   documentsRejected,
+
+  /// Driver mode asked for on an account with no car. `PUT /me/mode` answers
+  /// 422 for it (API.md §4), and the profile screen turns it into an offer to
+  /// add one rather than an error.
+  driverProfileRequired,
+
+  /// The ride takes women passengers only (API.md §21).
+  womenOnlyRide,
   storage,
   cancelled,
   unknown,

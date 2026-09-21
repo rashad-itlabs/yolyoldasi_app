@@ -59,6 +59,12 @@ dependencies:
   flutter_animate: ^4.5.2
   shimmer: ^3.0.0
 
+  # The share sheet. Intercity rides are still arranged in WhatsApp and
+  # Telegram groups, so a driver's most natural act of growth is pasting their
+  # listing into one — and the invite code travels the same way. Without this
+  # the app has no way to hand anything to those conversations.
+  share_plus: ^12.0.2
+
   # The version this build actually is, read from the platform at launch.
   # The force-update gate compares it against what the server demands, so a
   # hand-maintained constant would be a bug waiting to happen: the number that

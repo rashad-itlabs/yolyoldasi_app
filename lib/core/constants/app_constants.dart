@@ -38,6 +38,10 @@ abstract final class AppRules {
 
   // Field lengths, from the validation tables in API.md.
   static const int maxNoteLength = 400;
+
+  /// API.md §19: a ride request's `note` is shorter than a ride's — it is a
+  /// line to a driver, not a description of the trip.
+  static const int maxRequestNoteLength = 300;
   static const int maxReviewLength = 500;
   static const int maxMessageLength = 1000;
   static const int maxAboutLength = 300;

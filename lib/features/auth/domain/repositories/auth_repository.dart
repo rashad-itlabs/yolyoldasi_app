@@ -38,9 +38,13 @@ abstract interface class AuthRepository {
   /// Fails with [ValidationFailure] on a wrong, expired or already-used code,
   /// [RateLimitFailure] after five wrong attempts (which cancels the code), and
   /// [PermissionFailure] when the account is blocked.
+  ///
+  /// [referralCode] is attached only when this turns out to be a new account
+  /// (API.md §21) — an existing user cannot retroactively credit anyone.
   FutureResult<AuthSession> verifyCode({
     required String phone,
     required String code,
+    String? referralCode,
   });
 
   /// `POST /auth/logout`, then clears the local token.

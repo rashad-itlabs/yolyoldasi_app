@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/error/result.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/analytics.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/widgets/app_button.dart';
@@ -18,6 +20,7 @@ import '../../../shell/presentation/bloc/badges/badges_bloc.dart';
 import '../../domain/entities/ride.dart';
 import '../../domain/repositories/ride_repository.dart';
 import '../bloc/my_rides/my_rides_bloc.dart';
+import '../widgets/demand_strip.dart';
 import '../widgets/ride_card.dart';
 
 /// The driver home: their own listings, split into upcoming and past.
@@ -97,6 +100,7 @@ class _MyRidesView extends StatelessWidget {
           child: Column(
             children: [
               const _DriverStatusBanner(),
+              const DemandStrip(),
               const Expanded(
                 child: TabBarView(
                   children: [
@@ -321,6 +325,61 @@ class _RideActions extends StatelessWidget {
     );
   }
 
+  /// Re-publishes this ride on a date the driver picks.
+  ///
+  /// Nothing else is asked for: route, price, seats and conditions come from
+  /// the original. The whole point is that the second listing costs two taps
+  /// rather than the three-step form again.
+  Future<void> _repeat(BuildContext context) async {
+    final l10n = context.l10n;
+    final rides = context.read<RideRepository>();
+    final analytics = context.read<Analytics>();
+    final bloc = context.read<MyRidesBloc>();
+    final now = DateTime.now();
+
+    final date = await showDatePicker(
+      context: context,
+      helpText: l10n.repeatRideTitle,
+      // A week on from the original is the common case, and never in the past.
+      initialDate: ride.departureAt.isAfter(now)
+          ? ride.departureAt.add(const Duration(days: 7))
+          : now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (date == null || !context.mounted) return;
+
+    // The time of day is kept from the original: someone repeating a run does
+    // it at the hour they always do.
+    final departure = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      ride.departureAt.hour,
+      ride.departureAt.minute,
+    );
+
+    analytics.log(
+      Ev.rideRepeated,
+      params: {
+        'ride_id': ride.id,
+        'from_city_id': ride.fromCity.id,
+        'to_city_id': ride.toCity.id,
+      },
+    );
+
+    final result = await rides.repeat(ride.id, departure);
+    if (!context.mounted) return;
+
+    switch (result) {
+      case Ok():
+        AppFeedback.success(context, l10n.repeatCreated);
+        bloc.add(const MyRidesRequested(refresh: true));
+      case Err(:final failure):
+        AppFeedback.error(context, failure.message(l10n));
+    }
+  }
+
   Future<void> _manage(BuildContext context) async {
     final l10n = context.l10n;
     final bloc = context.read<MyRidesBloc>();
@@ -341,6 +400,18 @@ class _RideActions extends StatelessWidget {
                   context.push(Routes.rideEdit(ride.id));
                 },
               ),
+            // Available on finished rides too — in fact especially there. The
+            // weekly run is the one worth repeating, and by the time the
+            // driver thinks of it the last one is already in the past tab.
+            ListTile(
+              leading: const Icon(Icons.repeat_rounded),
+              title: Text(l10n.repeatRide),
+              subtitle: Text(l10n.repeatRideBody),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _repeat(context);
+              },
+            ),
             if (ride.status.isActive || ride.status == RideStatus.inactive)
               ListTile(
                 leading: Icon(

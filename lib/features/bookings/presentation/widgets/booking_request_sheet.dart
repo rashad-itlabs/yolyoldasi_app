@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/extensions/context_extensions.dart';
+import '../../../../core/services/analytics.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/widgets/app_button.dart';
@@ -11,6 +12,7 @@ import '../../../../core/widgets/app_controls.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../rides/domain/entities/ride.dart';
+import '../../domain/entities/booking.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../bloc/booking_request/booking_request_bloc.dart';
 
@@ -51,6 +53,18 @@ class BookingRequestSheet extends StatelessWidget {
       listener: (context, state) {
         final booking = state.createdBooking;
         if (state.status.isSuccess && booking != null) {
+          // The event the whole funnel is aimed at. `instant` separates the
+          // bookings that were confirmed on the spot from the ones now waiting
+          // on a driver — two very different experiences under one number.
+          context.read<Analytics>().log(
+            Ev.bookingRequested,
+            params: {
+              'ride_id': booking.ride.id,
+              'seats': booking.seats,
+              'instant': booking.status == BookingStatus.confirmed,
+            },
+          );
+
           Navigator.of(context).pop(booking.id);
           return;
         }

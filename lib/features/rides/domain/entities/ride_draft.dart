@@ -21,6 +21,8 @@ class RideDraft extends Equatable {
     this.pickupPoint = '',
     this.dropoffPoint = '',
     this.instantBooking = false,
+    this.womenOnly = false,
+    this.repeatWeeks = 1,
   });
 
   final int? vehicleId;
@@ -39,6 +41,17 @@ class RideDraft extends Equatable {
   final String dropoffPoint;
   final bool instantBooking;
 
+  /// Only women may book. Offered on the form only to a driver whose own
+  /// profile says `female` — the server refuses it otherwise (API.md §21).
+  final bool womenOnly;
+
+  /// How many consecutive weeks to publish this run for, 1–8.
+  ///
+  /// The weekly commuter is the driver worth keeping, and making them refill
+  /// the three-step form every Friday is how you lose them. Not part of
+  /// [RideDraft.fromRide]: editing one listing never fans out into eight.
+  final int repeatWeeks;
+
   factory RideDraft.fromRide(Ride ride) => RideDraft(
     vehicleId: ride.vehicle?.id,
     fromCityId: ride.fromCity.id,
@@ -55,6 +68,7 @@ class RideDraft extends Equatable {
     pickupPoint: ride.pickupPoint,
     dropoffPoint: ride.dropoffPoint,
     instantBooking: ride.instantBooking,
+    womenOnly: ride.womenOnly,
   );
 
   DateTime? get departureAt {
@@ -102,6 +116,8 @@ class RideDraft extends Equatable {
     String? pickupPoint,
     String? dropoffPoint,
     bool? instantBooking,
+    bool? womenOnly,
+    int? repeatWeeks,
   }) {
     return RideDraft(
       vehicleId: vehicleId != null ? vehicleId() : this.vehicleId,
@@ -117,6 +133,8 @@ class RideDraft extends Equatable {
       pickupPoint: pickupPoint ?? this.pickupPoint,
       dropoffPoint: dropoffPoint ?? this.dropoffPoint,
       instantBooking: instantBooking ?? this.instantBooking,
+      womenOnly: womenOnly ?? this.womenOnly,
+      repeatWeeks: repeatWeeks ?? this.repeatWeeks,
     );
   }
 
@@ -137,5 +155,7 @@ class RideDraft extends Equatable {
     pickupPoint,
     dropoffPoint,
     instantBooking,
+    womenOnly,
+    repeatWeeks,
   ];
 }

@@ -56,7 +56,13 @@ enum PushChannel {
     NotificationType.bookingCancelled ||
     NotificationType.rideCancelled ||
     NotificationType.reviewRequest => PushChannel.bookings,
-    NotificationType.rideReminder => PushChannel.reminders,
+    // Both ride-request types ride the reminders channel rather than bookings:
+    // they announce something that has not happened yet, and a passenger may
+    // reasonably want booking alerts on while these are off. Matches
+    // `config/onesignal.php` on the server.
+    NotificationType.rideReminder ||
+    NotificationType.rideRequestMatched ||
+    NotificationType.rideRequestPosted => PushChannel.reminders,
     NotificationType.adminMarketing => PushChannel.marketing,
     NotificationType.documentsApproved ||
     NotificationType.documentsRejected ||

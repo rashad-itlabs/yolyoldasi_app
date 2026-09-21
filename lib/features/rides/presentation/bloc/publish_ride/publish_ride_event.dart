@@ -14,6 +14,7 @@ class PublishRideStarted extends PublishRideEvent {
     this.rideId,
     this.vehicleId,
     this.instantBookingDefault = false,
+    this.prefill,
   });
 
   final int? rideId;
@@ -24,8 +25,32 @@ class PublishRideStarted extends PublishRideEvent {
   /// `instant_booking_default` from the driver profile (API.md §7).
   final bool instantBookingDefault;
 
+  /// A route and date the form should open with.
+  ///
+  /// Set when the driver arrived from a passenger's request or from the demand
+  /// list — they have already been shown the route, and asking them to type it
+  /// back in is the surest way to lose them between the two screens.
+  final RidePrefill? prefill;
+
   @override
-  List<Object?> get props => [rideId, vehicleId, instantBookingDefault];
+  List<Object?> get props => [
+    rideId,
+    vehicleId,
+    instantBookingDefault,
+    prefill,
+  ];
+}
+
+/// A route (and optionally a date) handed to the publish form on open.
+class RidePrefill extends Equatable {
+  const RidePrefill({required this.fromCityId, required this.toCityId, this.date});
+
+  final int fromCityId;
+  final int toCityId;
+  final DateTime? date;
+
+  @override
+  List<Object?> get props => [fromCityId, toCityId, date];
 }
 
 class PublishRideFieldChanged extends PublishRideEvent {
@@ -41,6 +66,8 @@ class PublishRideFieldChanged extends PublishRideEvent {
     this.pickupPoint,
     this.dropoffPoint,
     this.instantBooking,
+    this.womenOnly,
+    this.repeatWeeks,
   });
 
   final int? vehicleId;
@@ -54,6 +81,8 @@ class PublishRideFieldChanged extends PublishRideEvent {
   final String? pickupPoint;
   final String? dropoffPoint;
   final bool? instantBooking;
+  final bool? womenOnly;
+  final int? repeatWeeks;
 
   @override
   List<Object?> get props => [
@@ -68,6 +97,8 @@ class PublishRideFieldChanged extends PublishRideEvent {
     pickupPoint,
     dropoffPoint,
     instantBooking,
+    womenOnly,
+    repeatWeeks,
   ];
 }
 

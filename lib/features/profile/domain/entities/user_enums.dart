@@ -35,9 +35,39 @@ enum Gender {
 
   String get apiValue => name;
 
+  /// The women-only ride filter turns on this one check, so it is worth a name
+  /// of its own rather than `== Gender.female` scattered across the UI.
+  bool get isFemale => this == Gender.female;
+
   static Gender fromApi(String? value) => Gender.values.firstWhere(
     (g) => g.apiValue == value,
     orElse: () => Gender.unspecified,
+  );
+}
+
+/// How far a driver has come, as one word (API.md §21).
+///
+/// Wire: `new | rising | trusted`. A rating on its own misleads at the start —
+/// a 5.0 from one trip outranks a 4.7 from fifteen — so the server folds the
+/// trip count into it and the app shows the result rather than two numbers the
+/// passenger has to weigh themselves.
+enum DriverTier {
+  /// Wire value `new`; `new` is a reserved word in Dart.
+  newcomer('new'),
+  rising('rising'),
+  trusted('trusted');
+
+  const DriverTier(this.apiValue);
+
+  final String apiValue;
+
+  /// Only the top tier earns a badge in search results. Showing a chip on
+  /// every card would make the chip mean nothing.
+  bool get isBadgeworthy => this == DriverTier.trusted;
+
+  static DriverTier fromApi(String? value) => DriverTier.values.firstWhere(
+    (t) => t.apiValue == value,
+    orElse: () => DriverTier.newcomer,
   );
 }
 

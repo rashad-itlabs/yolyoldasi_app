@@ -1,6 +1,7 @@
 import '../../../../core/error/result.dart';
 import '../../../../core/network/upload_file.dart';
 import '../../domain/entities/app_user.dart';
+import '../../domain/entities/referral.dart';
 import '../../domain/entities/user_enums.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../models/user_model.dart';
@@ -50,6 +51,9 @@ class UserRepositoryImpl implements UserRepository {
   @override
   FutureResult<AppUser> uploadPhoto(UploadFile photo) =>
       _users.uploadPhoto(photo);
+
+  @override
+  FutureResult<ReferralSummary> referral() => _users.referral();
 
   @override
   FutureResult<PublicUser> publicProfile(int userId) =>

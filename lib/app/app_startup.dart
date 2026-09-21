@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/di/app_dependencies.dart';
 import '../core/extensions/context_extensions.dart';
+import '../core/services/analytics.dart';
 import '../core/services/push/foreground_message_watcher.dart';
 import '../core/services/push/local_notifications.dart';
 import '../core/services/push/pending_deep_link.dart';
@@ -82,6 +83,10 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     // mint a new token, and the server keeps sending to the old one until it
     // is told otherwise.
     _tokenSubscription = _push.tokenChanges.listen(_registerToken);
+
+    // The first event of every session, and the denominator of every funnel
+    // number that follows it.
+    _dependencies.analytics.log(Ev.appOpen);
   }
 
   @override
@@ -104,6 +109,12 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
       // The baseline is kept, so returning does not replay what arrived while
       // away; that backlog belongs to the push transport.
       _watcher.pause();
+
+      // Last chance to get the buffer out. A session that ends here — the user
+      // swipes the app away and never returns — would otherwise lose
+      // everything it recorded, and those are exactly the sessions worth
+      // understanding.
+      unawaited(_dependencies.analytics.flush());
       return;
     }
 

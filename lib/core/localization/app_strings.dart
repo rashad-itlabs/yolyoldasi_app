@@ -253,7 +253,6 @@ class AppStrings {
   String get onlyVerified => _get('onlyVerified');
   String get noRidesFound => _get('noRidesFound');
   String get noRidesFoundBody => _get('noRidesFoundBody');
-  String get recentSearches => _get('recentSearches');
   String get popularRoutes => _get('popularRoutes');
   String get allActiveRides => _get('allActiveRides');
   String get noActiveRides => _get('noActiveRides');
@@ -505,6 +504,8 @@ class AppStrings {
   String get errSelfBooking => _get('errSelfBooking');
   String get errDocumentsPending => _get('errDocumentsPending');
   String get errDocumentsRejected => _get('errDocumentsRejected');
+  String get errDriverProfileRequired => _get('errDriverProfileRequired');
+  String get errWomenOnlyRide => _get('errWomenOnlyRide');
   String get errStorage => _get('errStorage');
   String get errCancelled => _get('errCancelled');
   String get errUnknown => _get('errUnknown');
@@ -680,4 +681,177 @@ class AppStrings {
       _ => many,
     };
   }
+
+  // ------------------------------------------------- böyümə funksiyaları
+  String get rideRequests => _get('rideRequests');
+  String get myRideRequests => _get('myRideRequests');
+  String get createRideRequest => _get('createRideRequest');
+  String get createRideRequestTitle => _get('createRideRequestTitle');
+  String get createRideRequestBody => _get('createRideRequestBody');
+  String get rideRequestCreated => _get('rideRequestCreated');
+  String get rideRequestCreatedBody => _get('rideRequestCreatedBody');
+  String get rideRequestCancelled => _get('rideRequestCancelled');
+  String get rideRequestCancel => _get('rideRequestCancel');
+  String get rideRequestCancelConfirm => _get('rideRequestCancelConfirm');
+  String get rideRequestMatches => _get('rideRequestMatches');
+  String get rideRequestNoMatches => _get('rideRequestNoMatches');
+  String get rideRequestNoMatchesBody => _get('rideRequestNoMatchesBody');
+  String get noRideRequests => _get('noRideRequests');
+  String get noRideRequestsBody => _get('noRideRequestsBody');
+  String get incomingRideRequests => _get('incomingRideRequests');
+  String get incomingRideRequestsBody => _get('incomingRideRequestsBody');
+  String get noIncomingRideRequests => _get('noIncomingRideRequests');
+  String get noIncomingRideRequestsBody => _get('noIncomingRideRequestsBody');
+  String get flexibleDays => _get('flexibleDays');
+  String get flexibleDaysExact => _get('flexibleDaysExact');
+  String get wantedDate => _get('wantedDate');
+  String get requestNoteHint => _get('requestNoteHint');
+  String get publishForThisRequest => _get('publishForThisRequest');
+  String get rideRequestStatusOpen => _get('rideRequestStatusOpen');
+  String get rideRequestStatusFulfilled => _get('rideRequestStatusFulfilled');
+  String get rideRequestStatusCancelled => _get('rideRequestStatusCancelled');
+  String get rideRequestStatusExpired => _get('rideRequestStatusExpired');
+  String get demandTitle => _get('demandTitle');
+  String get demandEmpty => _get('demandEmpty');
+  String get topRoutesTitle => _get('topRoutesTitle');
+  String get topRoutesBody => _get('topRoutesBody');
+  String get demandPublishCta => _get('demandPublishCta');
+  String get earningsTitle => _get('earningsTitle');
+  String get earningsFuelNote => _get('earningsFuelNote');
+  String get earningsFree => _get('earningsFree');
+  String get suggestedPrice => _get('suggestedPrice');
+  String get suggestedPriceHistory => _get('suggestedPriceHistory');
+  String get suggestedPriceDistance => _get('suggestedPriceDistance');
+  String get usePrice => _get('usePrice');
+  String get womenOnly => _get('womenOnly');
+  String get womenOnlyRide => _get('womenOnlyRide');
+  String get womenOnlyHint => _get('womenOnlyHint');
+  String get womenOnlyBlocked => _get('womenOnlyBlocked');
+  String get filterDriverGender => _get('filterDriverGender');
+  String get filterDriverAny => _get('filterDriverAny');
+  String get filterDriverFemale => _get('filterDriverFemale');
+  String get filterDriverMale => _get('filterDriverMale');
+  String get filterInstantOnly => _get('filterInstantOnly');
+  String get filterVerifiedOnly => _get('filterVerifiedOnly');
+  String get filterWomenOnly => _get('filterWomenOnly');
+  String get filterServerNote => _get('filterServerNote');
+  String get verifiedDriver => _get('verifiedDriver');
+  String get tierTrusted => _get('tierTrusted');
+  String get tierRising => _get('tierRising');
+  String get verifyBoostHint => _get('verifyBoostHint');
+  String get repeatRide => _get('repeatRide');
+  String get repeatRideTitle => _get('repeatRideTitle');
+  String get repeatRideBody => _get('repeatRideBody');
+  String get repeatWeeks => _get('repeatWeeks');
+  String get repeatWeeksOnce => _get('repeatWeeksOnce');
+  String get repeatCreated => _get('repeatCreated');
+  String get shareRide => _get('shareRide');
+  String get shareRideUnavailable => _get('shareRideUnavailable');
+  String get referral => _get('referral');
+  String get referralTitle => _get('referralTitle');
+  String get referralBody => _get('referralBody');
+  String get referralCode => _get('referralCode');
+  String get referralInvited => _get('referralInvited');
+  String get referralActive => _get('referralActive');
+  String get referralBoostActive => _get('referralBoostActive');
+  String get referralBoostUntil => _get('referralBoostUntil');
+  String get referralShare => _get('referralShare');
+  String get referralShareText => _get('referralShareText');
+  String get referralCodeHint => _get('referralCodeHint');
+  String get switchMode => _get('switchMode');
+  String get switchToDriver => _get('switchToDriver');
+  String get switchToPassenger => _get('switchToPassenger');
+  String get switchModeConfirmDriver => _get('switchModeConfirmDriver');
+  String get switchModeConfirmPassenger => _get('switchModeConfirmPassenger');
+  String get switchModeDone => _get('switchModeDone');
+  String get becomeDriverTitle => _get('becomeDriverTitle');
+  String get becomeDriverBody => _get('becomeDriverBody');
+  String get signInToContinue => _get('signInToContinue');
+  String get signInToBook => _get('signInToBook');
+  String get signInToRequest => _get('signInToRequest');
+  String get browseAsGuest => _get('browseAsGuest');
+  String get signIn => _get('signIn');
+  String get skipSignIn => _get('skipSignIn');
+  String get askDriversTitle => _get('askDriversTitle');
+  String get askDriversBody => _get('askDriversBody');
+
+  /// "43 nəfər bu həftə axtarıb" — the line that turns publishing from a
+  /// gamble into an answer.
+  String demandSearches(int count, int days) => switch (languageCode) {
+    'ru' =>
+      '$count ${_ruPlural(count, 'человек искал', 'человека искали', 'человек искали')} за $days ${_ruPlural(days, 'день', 'дня', 'дней')}',
+    'en' =>
+      count == 1
+          ? '1 person searched this route in $days days'
+          : '$count people searched this route in $days days',
+    _ => 'Son $days gündə $count nəfər bu marşrutu axtarıb',
+  };
+
+  /// "6 nəfər konkret yer istəyir" — the stronger of the two demand signals.
+  String demandRequests(int count) => switch (languageCode) {
+    'ru' =>
+      '$count ${_ruPlural(count, 'пассажир ищет', 'пассажира ищут', 'пассажиров ищут')} место',
+    'en' =>
+      count == 1 ? '1 passenger wants a seat' : '$count passengers want a seat',
+    _ => '$count nəfər konkret yer istəyir',
+  };
+
+  /// "3 yer × 15 ₼ = 45 ₼". The driver has to see the number before the
+  /// motivation lands.
+  String earningsLine(int seats, String price, String total) =>
+      '$seats × $price = $total';
+
+  /// "±1 gün" — how wide a ride request's date window is.
+  String flexibleDaysLabel(int days) => switch (languageCode) {
+    'ru' => days == 0 ? 'Точная дата' : '±$days ${_ruPlural(days, 'день', 'дня', 'дней')}',
+    'en' => days == 0 ? 'Exact date' : days == 1 ? '±1 day' : '±$days days',
+    _ => days == 0 ? 'Dəqiq tarix' : '±$days gün',
+  };
+
+  /// "Adətən 2 saat ərzində cavab verir" — the unknown that decides whether a
+  /// passenger sends the request at all.
+  String respondsWithin(int minutes) {
+    final hours = (minutes / 60).round();
+    final within = minutes < 90
+        ? switch (languageCode) {
+            'ru' => '$minutes мин',
+            'en' => '$minutes min',
+            _ => '$minutes dəq',
+          }
+        : switch (languageCode) {
+            'ru' => '$hours ${_ruPlural(hours, 'час', 'часа', 'часов')}',
+            'en' => hours == 1 ? '1 hour' : '$hours hours',
+            _ => '$hours saat',
+          };
+
+    return switch (languageCode) {
+      'ru' => 'Обычно отвечает в течение $within',
+      'en' => 'Usually answers within $within',
+      _ => 'Adətən $within ərzində cavab verir',
+    };
+  }
+
+  /// "Sorğuların 90%-inə cavab verir".
+  String responseRateLabel(int percent) => switch (languageCode) {
+    'ru' => 'Отвечает на $percent% запросов',
+    'en' => 'Answers $percent% of requests',
+    _ => 'Sorğuların $percent%-inə cavab verir',
+  };
+
+  String repeatWeeksLabel(int weeks) => switch (languageCode) {
+    'ru' => weeks == 1
+        ? 'Только один раз'
+        : '$weeks ${_ruPlural(weeks, 'неделя', 'недели', 'недель')} подряд',
+    'en' => weeks == 1 ? 'Just this once' : 'Every week for $weeks weeks',
+    _ => weeks == 1 ? 'Yalnız bu dəfə' : '$weeks həftə ardıcıl',
+  };
+
+  /// How many rides one publish created — the confirmation after a repeat.
+  String ridesPublished(int count) => switch (languageCode) {
+    'ru' => count == 1
+        ? 'Объявление размещено'
+        : 'Размещено $count ${_ruPlural(count, 'объявление', 'объявления', 'объявлений')}',
+    'en' => count == 1 ? 'Ride published' : '$count rides published',
+    _ => count == 1 ? 'Elan verildi' : '$count elan verildi',
+  };
 }

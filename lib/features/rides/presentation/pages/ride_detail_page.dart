@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/analytics.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/widgets/app_avatar.dart';
@@ -14,6 +16,7 @@ import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
 import '../../../../core/widgets/route_timeline.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../bookings/presentation/widgets/booking_request_sheet.dart';
 import '../../../profile/domain/entities/user_enums.dart';
 import '../../domain/entities/ride.dart';
@@ -39,6 +42,28 @@ class RideDetailPage extends StatelessWidget {
 
 class _RideDetailView extends StatelessWidget {
   const _RideDetailView();
+
+  /// Hands the ride to whatever the phone can share with.
+  ///
+  /// The text carries the route, the time and the price so the message reads
+  /// on its own in a group chat — a bare link is scrolled past.
+  Future<void> _shareRide(BuildContext context, Ride ride) async {
+    final l10n = context.l10n;
+    final fmt = context.fmt;
+
+    context.read<Analytics>().log(
+      Ev.rideShared,
+      params: {'ride_id': ride.id, 'is_mine': ride.isMine},
+    );
+
+    final text =
+        '${ride.fromCity.name} → ${ride.toCity.name}\n'
+        '${fmt.dayLabelWithTime(ride.departureAt)} · '
+        '${fmt.price(ride.pricePerSeat)} ${l10n.perSeat}\n'
+        '${ride.shareUrl}';
+
+    await SharePlus.instance.share(ShareParams(text: text));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +93,15 @@ class _RideDetailView extends StatelessWidget {
         return AppScaffold(
           title: l10n.rideDetails,
           actions: [
+            // The cheapest distribution the product has. Intercity rides are
+            // still arranged in WhatsApp and Telegram groups, and until now a
+            // driver had nothing to paste into one.
+            if (state.ride?.shareUrl != null)
+              IconButton(
+                icon: const Icon(Icons.ios_share_rounded),
+                tooltip: l10n.shareRide,
+                onPressed: () => _shareRide(context, state.ride!),
+              ),
             if (state.canEdit)
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
@@ -253,6 +287,13 @@ class _Body extends StatelessWidget {
             ),
           ],
         ),
+
+        // A condition, not a decoration: a passenger it excludes must find out
+        // here rather than from a 422 after tapping the booking button.
+        if (ride.womenOnly) ...[
+          VGap.md,
+          InfoBanner(tone: BannerTone.info, message: l10n.womenOnlyHint),
+        ],
 
         // -------------------------------------------------------------- note
         if (ride.note.isNotEmpty) ...[
@@ -464,13 +505,41 @@ class _RideActionBar extends StatelessWidget {
       );
     }
 
-    final canBook = ride.isBookable;
+    // The driver's women-only condition is checked against *this* viewer, so
+    // the button is shut before the tap rather than after a 422. The server
+    // still has the final say (API.md §21) — this only keeps the passenger out
+    // of a dead end.
+    final viewerGender = context.select<SessionBloc, Gender?>(
+      (bloc) => bloc.state.user?.gender,
+    );
+
+    // A guest got this far because browsing is open (API.md §18). Booking is
+    // not, so the bar asks for an account at the moment they reach for it —
+    // which is the only moment the ask is easy to say yes to.
+    final isGuest = context.select<SessionBloc, bool>(
+      (bloc) => bloc.state.user == null,
+    );
+    if (isGuest) {
+      return BottomActionBar(
+        child: AppButton(
+          label: l10n.signInToBook,
+          icon: Icons.login_rounded,
+          onPressed: () => context.push(Routes.login),
+        ),
+      );
+    }
+
+    final canBook = ride.isBookableBy(viewerGender);
+    final blockedByWomenOnly = ride.isBookable && !canBook;
+
     return BottomActionBar(
       caption: Row(
         children: [
           Expanded(
             child: Text(
-              canBook
+              blockedByWomenOnly
+                  ? l10n.womenOnlyBlocked
+                  : canBook
                   ? l10n.seatsLeft(ride.seatsLeft)
                   : ride.isFull
                   ? l10n.rideFull

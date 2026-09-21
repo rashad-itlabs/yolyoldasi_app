@@ -7,6 +7,7 @@ import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_feedback.dart';
+import '../../../profile/domain/entities/user_enums.dart';
 import '../../domain/entities/ride_query.dart';
 import '../bloc/ride_search/ride_search_bloc.dart';
 
@@ -158,6 +159,73 @@ class SearchFilterSheet extends StatelessWidget {
                   ],
                 ),
 
+                // ------------------------------------------ driver gender
+                // The filter that decides whether a large group of passengers
+                // uses this app at all. For a woman travelling between cities
+                // alone, who is behind the wheel is the first question, not a
+                // preference — and without an answer she does not book.
+                VGap.xxl,
+                Text(l10n.filterDriverGender, style: context.text.titleSmall),
+                VGap.md,
+                Wrap(
+                  spacing: Gap.sm,
+                  runSpacing: Gap.sm,
+                  children: [
+                    ChoiceChip(
+                      selected: query.driverGender == null,
+                      onSelected: (_) => bloc.add(
+                        const RideSearchFiltersChanged(clearDriverGender: true),
+                      ),
+                      label: Text(l10n.filterDriverAny),
+                    ),
+                    ChoiceChip(
+                      selected: query.driverGender == Gender.female,
+                      onSelected: (_) => bloc.add(
+                        const RideSearchFiltersChanged(
+                          driverGender: Gender.female,
+                        ),
+                      ),
+                      label: Text(l10n.filterDriverFemale),
+                    ),
+                    ChoiceChip(
+                      selected: query.driverGender == Gender.male,
+                      onSelected: (_) => bloc.add(
+                        const RideSearchFiltersChanged(
+                          driverGender: Gender.male,
+                        ),
+                      ),
+                      label: Text(l10n.filterDriverMale),
+                    ),
+                  ],
+                ),
+
+                // ------------------------------------------------- switches
+                VGap.lg,
+                _FilterSwitch(
+                  label: l10n.filterWomenOnly,
+                  icon: Icons.woman_rounded,
+                  value: query.womenOnly,
+                  onChanged: (value) =>
+                      bloc.add(RideSearchFiltersChanged(womenOnly: value)),
+                ),
+                // The worst thing that happens to a passenger is sending a
+                // request and hearing nothing. This filter removes that
+                // possibility entirely.
+                _FilterSwitch(
+                  label: l10n.filterInstantOnly,
+                  icon: Icons.bolt_rounded,
+                  value: query.instantOnly,
+                  onChanged: (value) =>
+                      bloc.add(RideSearchFiltersChanged(instantOnly: value)),
+                ),
+                _FilterSwitch(
+                  label: l10n.filterVerifiedOnly,
+                  icon: Icons.verified_rounded,
+                  value: query.verifiedOnly,
+                  onChanged: (value) =>
+                      bloc.add(RideSearchFiltersChanged(verifiedOnly: value)),
+                ),
+
                 if (query.hasRefinements) ...[
                   VGap.lg,
                   InfoBanner(
@@ -171,6 +239,37 @@ class SearchFilterSheet extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// One on/off server-side filter.
+///
+/// A switch rather than a chip: these three are questions with a yes and a no,
+/// and a chip row would put them in the same visual family as the sort options,
+/// which are a pick-one.
+class _FilterSwitch extends StatelessWidget {
+  const _FilterSwitch({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile.adaptive(
+      value: value,
+      onChanged: onChanged,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      secondary: Icon(icon, color: context.palette.textSecondary),
+      title: Text(label, style: context.text.bodyMedium),
     );
   }
 }

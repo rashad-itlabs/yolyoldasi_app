@@ -4,6 +4,32 @@ import 'app_routes.dart';
 /// Routes that are only reachable while signed out.
 const _authRoutes = {Routes.splash, Routes.onboarding, Routes.login};
 
+/// What a signed-out visitor is allowed to look at.
+///
+/// This is the single biggest hole in the funnel closed: until now the first
+/// screen after onboarding asked for a phone number, and a visitor had to hand
+/// one over before seeing that a single ride existed. Nobody gives their number
+/// to an empty room. These four endpoints are open on the server too
+/// (API.md §18), so the screens work with no token at all.
+///
+/// Everything that *writes* — booking, messaging, publishing, posting a
+/// request — still needs an account, and each of those buttons sends the
+/// visitor to sign in at the moment they reach for it.
+const _guestRoutes = {
+  Routes.home,
+  Routes.searchResults,
+  Routes.login,
+};
+
+/// Whether a signed-out visitor may stay on [location].
+///
+/// Prefix matching for the two detail screens: their paths carry an id, so an
+/// exact-set test would never hit them.
+bool _isGuestRoute(String location) =>
+    _guestRoutes.contains(location) ||
+    location.startsWith('/ride/') ||
+    location.startsWith('/user/');
+
 /// Where a given location is allowed to resolve, and nothing else.
 ///
 /// Lifted out of `buildRouter` so it can be read — and tested — on its own.
@@ -33,7 +59,18 @@ abstract final class AppGuard {
         if (!session.onboardingSeen) {
           return location == Routes.onboarding ? null : Routes.onboarding;
         }
-        return location == Routes.login ? null : Routes.login;
+        // Browsing is the default state, not sign-in.
+        //
+        // The destination here is `home`, and that is the whole point: `/splash`
+        // is not a guest route, so sending the unmatched case to `login` put
+        // every launch back on the phone-number screen and made the open door
+        // reachable only by noticing one button on the onboarding screen —
+        // which an existing install never sees again.
+        //
+        // Sign-in is somewhere the visitor goes, not somewhere they are put:
+        // `login` is in [_guestRoutes], and every button that needs an account
+        // pushes it at the moment it is needed.
+        return _isGuestRoute(location) ? null : Routes.home;
 
       case SessionStatus.needsProfile:
         return location == Routes.profileSetup ? null : Routes.profileSetup;

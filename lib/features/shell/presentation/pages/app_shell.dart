@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../app_update/presentation/widgets/optional_update_gate.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../bloc/badges/badges_bloc.dart';
@@ -63,11 +64,22 @@ class _NavigationBar extends StatelessWidget {
     final isDriver = context.select<SessionBloc, bool>(
       (bloc) => bloc.state.isDriverMode,
     );
+    // A signed-out visitor is allowed to browse (API.md §18), so the shell is
+    // on screen without an account. The other three tabs have nothing to show
+    // them — they are all `/me`-shaped — so tapping one is read as "I want in".
+    final isGuest = context.select<SessionBloc, bool>(
+      (bloc) => bloc.state.user == null,
+    );
     final badges = context.watch<BadgesBloc>().state;
 
     return NavigationBar(
       selectedIndex: navigationShell.currentIndex,
       onDestinationSelected: (index) {
+        if (isGuest && index != 0) {
+          context.push(Routes.login);
+          return;
+        }
+
         navigationShell.goBranch(
           index,
           // Tapping the active tab pops it back to its root.

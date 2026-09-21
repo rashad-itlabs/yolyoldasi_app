@@ -6,6 +6,7 @@ import '../../../../../core/bloc/data_status.dart';
 import '../../../../../core/error/failure.dart';
 import '../../../../../core/error/result.dart';
 import '../../../../../core/network/api_envelope.dart';
+import '../../../../profile/domain/entities/user_enums.dart';
 import '../../../domain/entities/ride.dart';
 import '../../../domain/entities/ride_query.dart';
 import '../../../domain/repositories/ride_repository.dart';
@@ -85,12 +86,19 @@ class RideSearchBloc extends Bloc<RideSearchEvent, RideSearchState> {
           ? () => null
           : (event.maxPrice == null ? null : () => event.maxPrice),
       bands: event.bands,
+      driverGender: event.clearDriverGender
+          ? () => null
+          : (event.driverGender == null ? null : () => event.driverGender),
+      womenOnly: event.womenOnly,
+      instantOnly: event.instantOnly,
+      verifiedOnly: event.verifiedOnly,
     );
     emit(state.copyWith(query: next));
 
-    // `sort` is a server parameter, so it needs a new request. The price
-    // ceiling and the time bands are applied to the loaded pages by
-    // `RideSearchState.rides`, so changing them only re-renders.
+    // `sort`, the driver's gender and the three switches are all server
+    // parameters, so they need a new request. The price ceiling and the time
+    // bands are applied to the loaded pages by `RideSearchState.rides`, so
+    // changing those only re-renders.
     if (next.needsRefetchFrom(previous)) add(const RideSearchSubmitted());
   }
 

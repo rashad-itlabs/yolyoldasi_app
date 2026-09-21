@@ -15,6 +15,7 @@ import 'package:yolyoldasi/core/theme/app_theme.dart';
 import 'package:yolyoldasi/core/types.dart';
 import 'package:yolyoldasi/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:yolyoldasi/features/auth/data/services/auth_api_service.dart';
+import 'package:yolyoldasi/features/auth/domain/entities/auth_session.dart';
 import 'package:yolyoldasi/features/auth/presentation/bloc/session/session_bloc.dart';
 import 'package:yolyoldasi/features/bookings/data/models/booking_model.dart';
 import 'package:yolyoldasi/features/bookings/domain/entities/booking.dart';
@@ -22,6 +23,7 @@ import 'package:yolyoldasi/features/bookings/domain/repositories/booking_reposit
 import 'package:yolyoldasi/features/profile/data/repositories/user_repository_impl.dart';
 import 'package:yolyoldasi/features/profile/data/services/device_token_api_service.dart';
 import 'package:yolyoldasi/features/profile/data/services/user_api_service.dart';
+import 'package:yolyoldasi/features/profile/domain/entities/user_enums.dart';
 import 'package:yolyoldasi/features/profile/domain/repositories/user_repository.dart';
 import 'package:yolyoldasi/features/profile/presentation/pages/public_profile_page.dart';
 import 'package:yolyoldasi/features/reviews/data/repositories/review_repository_impl.dart';
@@ -39,7 +41,13 @@ void main() {
   ///
   /// [bookings] is what `GET /bookings?status=completed` answers with, which
   /// is how the page decides whether a review is owed.
-  Widget wrap({List<Json> bookings = const []}) {
+  ///
+  /// [signedIn] drives the session the page is built under. It defaults to
+  /// `true` because everything this file asserts is about a viewer with an
+  /// account: the page is reachable without one (API.md §18), but "you still
+  /// owe this person a review" is a statement about the viewer's own bookings
+  /// and can only ever be false for a guest.
+  Widget wrap({List<Json> bookings = const [], bool signedIn = true}) {
     final tokens = InMemoryTokenStorage();
     final client = ApiClient(
       tokens: tokens,
@@ -63,6 +71,20 @@ void main() {
       settings: _FakeSettingsRepository(),
     );
     addTearDown(session.close);
+
+    if (signedIn) {
+      // `SessionSignedIn` reads `/me` to fill the profile, so the stub has to
+      // be in place before the event lands.
+      adapter.on('/me', 200, {
+        'data': {'id': 7, 'phone': '+994501234567', 'full_name': 'Sərnişin'},
+      });
+      session.add(
+        const SessionSignedIn(
+          AuthSession(token: 'test-token', userId: 7),
+          mode: UserMode.passenger,
+        ),
+      );
+    }
 
     return MultiRepositoryProvider(
       providers: [
@@ -232,6 +254,26 @@ void main() {
     // must not be there to press.
     await tester.pumpWidget(wrap(bookings: [completedTrip(reviewed: true)]));
     await tester.pumpAndSettle();
+    expect(find.text('Səfəri qiymətləndirin'), findsNothing);
+  });
+
+  testWidgets('opens for a guest without asking for their bookings', (
+    tester,
+  ) async {
+    adapter
+      ..on('/users/42/reviews', 200, reviews())
+      ..on('/users/42', 200, driver());
+
+    phoneWindow(tester);
+    await tester.pumpWidget(wrap(signedIn: false));
+    await tester.pumpAndSettle();
+
+    // The page itself works with no account (API.md §18) …
+    expect(find.text('Rəşad M.'), findsOneWidget);
+
+    // … and does not spend a guaranteed 401 on `GET /bookings`, which would
+    // reach the session as "your session expired" for someone who never had
+    // one.
     expect(find.text('Səfəri qiymətləndirin'), findsNothing);
   });
 

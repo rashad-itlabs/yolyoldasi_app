@@ -46,14 +46,24 @@ POST /auth/phone/verify   { phone, code, device }  → token + user
 Nömrə serverə istifadəçinin yazdığı kimi gedir; normallaşdırmanı server edir və
 2-ci addım **onun qaytardığı** `phone`-u göndərir.
 
-### SMS hələ qoşulmayıb
+### SMS
 
-`request` cavabı kodu `code` sahəsində geri qaytarır və giriş ekranı onu banner-də
-göstərir — cihaza SMS gəlmədiyi üçün başqa yolla girmək mümkün deyil.
+Kod artıq SMS ilə gedir — backend-də `config/sms.php`. Provayder şablonla
+konfiqurasiya olunur, kod dəyişmir:
 
-> ⚠️ Provayder qoşulan kimi `code` sahəsi cavabdan **çıxarılmalıdır**. Qalsa,
-> nömrəni bilən hər kəs kodu cavabdan oxuyub o hesaba girə bilər. Klient tərəfdə
-> heç nə silmək lazım deyil: sahə gəlməyəndə banner öz-özünə yox olur.
+```
+SMS_DRIVER=http
+SMS_URL=https://.../send
+SMS_PARAM_PHONE=to
+SMS_PARAM_TEXT=text
+SMS_AUTH_HEADER="Bearer ..."
+```
+
+`OTP_EXPOSE_CODE` defolt **false**-dur və `APP_ENV=production` olanda dəyəri nə
+olursa-olsun söndürülür. Klient tərəfdə heç nə silmək lazım deyil: `code` sahəsi
+gəlməyəndə banner öz-özünə yox olur.
+
+> ⚠️ Qalan tək iş — provayderin açarlarını serverin `.env`-inə yazmaq.
 
 ### Development
 
@@ -71,7 +81,7 @@ Köhnəlibsə problem deyil — `GET /me` 401 qaytarır və tətbiq giriş ekran
 
 | Funksiya | Vəziyyət |
 |---|---|
-| SMS provayderi | ⏸ kod hazırda cavabda qaytarılır |
+| SMS provayderi | ⏸ kod hazır, provayderin açarları `.env`-ə yazılmalıdır |
 | iOS Notification Service Extension | ⏸ şəkil və çatdırılma təsdiqi üçün; push onsuz da gedir |
 | Bildiriş mərkəzi (in-app) | ✅ işləyir — `GET /notifications` |
 
@@ -154,9 +164,12 @@ biznes qaydası pozulanda (`abort(422, '...')`) yalnız **mətn** gəlir və onu
 uyğunlaşdıracaq kod yoxdur. Ona görə `Failure.serverMessage` var:
 `failure_message.dart` əvvəl onu, sonra lokal tərcüməni göstərir.
 
-409 ayrıca tutulur (`ConflictFailure`): §16.4-ə görə "bu səfərə artıq müraciət
-etmisiniz" qalıcıdır, ləğv etsən belə təkrar müraciət olmur — istifadəçiyə
-"yenidən cəhd edin" demək səhv olardı.
+409 ayrıca tutulur (`ConflictFailure`): "bu səfərə artıq müraciət etmisiniz"
+təkrar cəhdlə həll olunmur, ona görə istifadəçiyə "yenidən cəhd edin" demək
+səhv olardı.
+
+Qayda §21-də yumşaldılıb: **sərnişin özü ləğv edibsə** bir dəfə yenidən müraciət
+edə bilir. Sürücü rədd və ya ləğv edibsə 409 dəyişmir — cavab artıq verilib.
 
 ### State management
 
@@ -172,6 +185,12 @@ router-in üstündə (`app/app.dart`):
 | `DriverProfileBloc` | sürücü profili, avtomobil, sənəd statusu |
 | `RideSearchBloc` | axtarış sorğusu və nəticələri |
 | `BadgesBloc` | oxunmamış mesaj/bildiriş sayğacları |
+
+Blok olmayan, amma eyni qatda duran bir servis də var: `Analytics`
+(`core/services/analytics.dart`). Hadisələr yaddaşda yığılır, 20 hadisədə və ya
+30 saniyədə bir `POST /events`-ə gedir, tətbiq fona keçəndə boşaldılır. Heç vaxt
+istisna atmır və heç vaxt gözlətmir — uğursuz göndəriş hadisələri növbənin
+başına qaytarır, yalnız 200 hadisə həddini keçəndə atır.
 
 Qalanları ekranla birlikdə yaranıb ölür (`RideDetailBloc`, `ChatBloc`, …).
 `bloc_concurrency` transformerləri: axtarışda `restartable`, "daha çox yüklə"
@@ -190,6 +209,20 @@ həll olunub — hər biri kodda şərhlə qeyd edilib:
 | Söhbətin başlığı | `GET /conversations/{id}` yoxdur → siyahıdan tapılır |
 | Şəhər koordinatları | API yalnız `{id, name}` verir → `az_cities.dart` adla uyğunlaşdırılır |
 | Vaxtı keçmiş elanlar | siyahı ekranda açıq qalarkən yola düşmə vaxtı keçə bilər → `Ride.upcomingOnly` hər siyahıdan çıxarır |
+| Vaxtı keçmiş tələb elanları | serverin gecə süpürgəsi (`demand:tidy`) səhərə qədər işləmir → `RideRequest.hasExpired` klientdə də yoxlanır |
+
+### Girişsiz baxış
+
+`AppGuard` imzasız ziyarətçini **axtarış, nəticələr, səfər detalı və ictimai
+profilə** buraxır (API.md §18). Yazan hər şey — bron, yazışma, elan, tələb —
+həmin düyməyə toxunan anda giriş ekranına aparır.
+
+Səbəb funnel-dir: əvvəl onboarding-dən sonrakı ilk ekran telefon nömrəsi
+istəyirdi və adam bir dənə də səfər görmədən nömrəsini verməli olurdu.
+
+Praktiki nəticə: qonaq ekranlarında `/me`-yə gedən heç bir sorğu işə düşməməlidir
+— 401 `AuthInterceptor`-da "sessiya bitdi" kimi oxunur və heç vaxt daxil olmamış
+adam üçün bu izaholunmazdır. `SearchHomePage` və `AppShell` bunu açıq yoxlayır.
 
 ---
 
@@ -207,8 +240,19 @@ həll olunub — hər biri kodda şərhlə qeyd edilib:
 | Marşrut elanı (3 addım) | `POST /rides` | ✅ |
 | Elan redaktəsi, aktiv/deaktiv, ləğv, tamamlama | `PUT`/`DELETE /rides/{id}`, `/complete` | ✅ |
 | Axtarış + səhifələmə | `GET /rides` | ✅ |
-| Bütün aktiv elanlar (filtrsiz) | `GET /rides` (şəhərsiz) | ⏳ backend `from_city_id`/`to_city_id`-ni ixtiyari etməlidir |
-| Son axtarışlar | `GET /me/recent-searches` | ✅ |
+| Bütün aktiv elanlar (filtrsiz) | `GET /rides` (şəhərsiz) | ✅ |
+| **Girişsiz baxış** | `GET /rides`, `/users/{id}` açıqdır | ✅ API.md §18 |
+| **Tələb elanları** | `/ride-requests/*` | ✅ API.md §19 |
+| **Tələb statistikası** | `GET /demand`, `/demand/top` | ✅ API.md §20 |
+| **Qiymət təklifi** | `GET /price-suggestion` | ✅ API.md §20 |
+| **Qadın sürücü / qadın sərnişin** | `driver_gender`, `women_only` | ✅ API.md §21 |
+| **Təkrar və həftəlik elan** | `POST /rides/{id}/repeat`, `repeat_weeks` | ✅ API.md §21 |
+| **Paylaşma linki** | `share_url` → `/r/{id}` | ✅ API.md §21 |
+| **Cavab statistikası, etibar pilləsi** | `stats.driver_*` | ✅ API.md §21 |
+| **Dəvət sistemi** | `GET /me/referral` | ✅ API.md §21 |
+| **Telemetriya** | `POST /events` | ✅ API.md §22 |
+| **Rejim keçidi (profil ekranından)** | `PUT /me/mode` | ✅ API.md §24 |
+| Son axtarışlar | `GET /me/recent-searches` | ❌ klientdən çıxarılıb |
 | Bron və qərarlar | `/bookings/*` | ✅ |
 | Ani bron | `instant_booking` | ✅ |
 | Nömrənin təsdiqdən sonra açılması | `contact_phone` | ✅ |
@@ -221,7 +265,7 @@ həll olunub — hər biri kodda şərhlə qeyd edilib:
 | Push **göndərilməsi** | OneSignal | ✅ backend `NotificationService` → `OneSignalService` |
 | Admin panelindən elan | `adminMessage` / `adminMarketing` | ✅ API.md §13 |
 | Məcburi / könüllü yeniləmə | `GET /app-version` | ✅ API.md §17 |
-| Admin panel | — | ❌ API-də admin endpoint-i yoxdur |
+| Admin panel | — | ❌ API-də admin endpoint-i yoxdur (panel Laravel tərəfdədir) |
 
 ### Biznes qaydaları
 
@@ -271,7 +315,11 @@ flutter test
   başına bir dəfə soruşulması
 - `test/app_update_router_test.dart` — `AppGuard`: məcburi yeniləmə zamanı
   bütün digər ünvanların `/update`-ə yönəlməsi, blokun olmadığı halda isə
-  heç birinin yönəlməməsi
+  heç birinin yönəlməməsi; **girişsiz baxışın** açıq, yazma ekranlarının isə
+  bağlı qalması
+- `test/growth_models_test.dart` — §19–§22-nin payload-ları: tələb elanının
+  tarix pəncərəsi, `is_verified`-in absent ↔ false fərqi, cavab statistikasının
+  3 sorğudan az olanda `null` qalması, `women_only` bron qaydası
 
 ---
 
@@ -283,3 +331,9 @@ flutter test
    bayrağı oxunur, amma istifadə olunacaq ekran yoxdur.
 3. **Xəritə inteqrasiyası** — `pickup_point` / `dropoff_point` hazırda sərbəst
    mətndir.
+4. **`demand:tidy` cron** — serverdə gündəlik işə salınmalıdır: vaxtı keçmiş
+   tələb elanlarını bağlayır və sabahkı səfərlər üçün `rideReminder` göndərir.
+
+   ```
+   0 9 * * *  cd /var/www/... && php artisan demand:tidy
+   ```

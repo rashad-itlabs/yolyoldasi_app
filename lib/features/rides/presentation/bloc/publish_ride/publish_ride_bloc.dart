@@ -32,12 +32,21 @@ class PublishRideBloc extends Bloc<PublishRideEvent, PublishRideState> {
   ) async {
     final rideId = event.rideId;
     if (rideId == null) {
+      final prefill = event.prefill;
+
       emit(
         PublishRideState(
           draft: RideDraft(
             vehicleId: event.vehicleId,
             instantBooking: event.instantBookingDefault,
+            fromCityId: prefill?.fromCityId,
+            toCityId: prefill?.toCityId,
+            date: prefill?.date,
           ),
+          // Straight to the schedule step when the route came with the
+          // request: re-confirming a route the driver just tapped on is a
+          // step that only costs them patience.
+          step: prefill == null ? PublishStep.route : PublishStep.schedule,
           loadStatus: DataStatus.success,
         ),
       );
@@ -96,6 +105,8 @@ class PublishRideBloc extends Bloc<PublishRideEvent, PublishRideState> {
           pickupPoint: event.pickupPoint,
           dropoffPoint: event.dropoffPoint,
           instantBooking: event.instantBooking,
+          womenOnly: event.womenOnly,
+          repeatWeeks: event.repeatWeeks,
         ),
         failure: () => null,
       ),

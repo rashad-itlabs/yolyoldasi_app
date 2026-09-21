@@ -720,6 +720,12 @@ fərqlənmirlər. Ayrıca endpoint yoxdur.
 `GET /me/recent-searches` → son 10 marşrut (hər marşrut üçün bir sətir).
 `DELETE /me/recent-searches` → hamısını silir.
 
+> **Klient bu endpoint-i çağırmır.** "Son axtarışlar" bölməsi ana ekrandan
+> çıxarıldı, ona görə Flutter tərəfdə nə bloc, nə model, nə də `Api` sabiti
+> qalıb. Cədvəlin özü **qalmalıdır**: `GET /rides` hər axtarışı ora yazır və
+> §20-dəki tələb statistikası (`GET /demand`) bütünlüklə həmin sətirlərdən
+> hesablanır. Yəni endpoint istifadəsizdir, data isə yox.
+
 ```json
 { "data": [{
   "from_city": { "id": 1, "name": "Bakı" },
@@ -818,3 +824,294 @@ istifadəçinin tətbiqə ümumiyyətlə girə bilməməsidir:
 Klient tərəfində eyni prinsip: sorğu alınmasa, cavab parse olunmasa, yaxud
 `status` tanınmayan bir söz olsa — tətbiq açıq qalır. Serverin əlçatmaz olması
 tətbiqin köhnə olduğuna dəlil deyil.
+
+---
+
+## 18. Girişsiz baxış
+
+Bu endpoint-lər **token tələb etmir**. Token göndərilsə tanınır (`is_mine`,
+`vehicle.plate`, axtarış tarixçəsi ona görə işləyir), göndərilməsə sorğu yenə
+işləyir.
+
+| Metod | Yol |
+|---|---|
+| GET | `/rides` |
+| GET | `/rides/{id}` |
+| GET | `/users/{id}` |
+| GET | `/users/{id}/reviews` |
+| POST | `/events` |
+
+Səbəb funnel-dir: əvvəl bunlar `auth:sanctum` altında idi və tətbiqi ilk dəfə
+açan adam **bir dənə də səfər görmədən** nömrəsini verməli olurdu. Giriş yalnız
+bron etmək, yazışmaq və elan vermək üçün tələb olunur.
+
+> Qonaq sorğusunda `recent_searches` **yazılmır** (sətrin sahibi olmazdı) və
+> `is_mine` həmişə `false` olur.
+
+Limit: dəqiqədə 120 sorğu (IP).
+
+---
+
+## 19. Tələb elanları (sərnişin tərəfi)
+
+Bazarın ikinci yarısı. `rides` təklifi saxlayır, `ride_requests` tələbi:
+"bu marşrutda, bu tarixdə yer axtarıram".
+
+İki iş görür — sürücüyə real tələb göstərir və uyğun elan yaranan kimi
+sərnişini geri çağırır.
+
+### POST `/ride-requests` → 201
+
+| Sahə | Qayda |
+|---|---|
+| `from_city_id` | **məcburi** |
+| `to_city_id` | **məcburi**, `from_city_id`-dən fərqli |
+| `wanted_date` | **məcburi**, `YYYY-MM-DD`, bu gün və ya sonra |
+| `flexible_days` | ixtiyari, 0–3 (±gün) |
+| `seats` | ixtiyari, 1–4, default 1 |
+| `note` | ixtiyari, ≤300 |
+
+Eyni marşrut + tarix üçün ikinci sətir yaranmır — mövcud sətir **yenilənir**
+(409 qaytarılmır).
+
+Cavabda `data` ilə yanaşı `matches` gəlir: həmin an uyğun gələn səfərlər
+(səfər obyektlərinin massivi). Sərnişin "yazdım, gözləyirəm" ekranında
+qalmamalıdır.
+
+```json
+{
+  "data": {
+    "id": 12,
+    "passenger": { "...": "qısa profil" },
+    "from_city": { "id": 1, "name": "Bakı" },
+    "to_city":   { "id": 9, "name": "Qəbələ" },
+    "wanted_date": "2026-09-25",
+    "flexible_days": 1,
+    "seats": 2,
+    "note": "Axşam saatları uyğundur.",
+    "status": "open",
+    "is_mine": true,
+    "matched_ride_id": null,
+    "created_at": "..."
+  },
+  "matches": [ { "...": "səfər obyekti" } ]
+}
+```
+
+### GET `/ride-requests?status=open`
+Sərnişinin öz elanları. Filtrsiz sorğuda `open` və `fulfilled` qayıdır.
+
+### GET `/ride-requests/{id}`
+Sahibi və ya — elan `open` olduqda — istənilən daxil olmuş istifadəçi görə
+bilir. Cavabda `matches` var.
+
+### DELETE `/ride-requests/{id}`
+Sətir silinmir, `status` → `cancelled`.
+
+### GET `/ride-requests/incoming` — sürücü kimi
+
+Marşrut verilməyəndə sürücünün **əvvəllər sürdüyü** marşrutlar götürülür; heç
+elanı yoxdursa, profilindəki şəhərdən keçən tələblər. `from_city_id` +
+`to_city_id` verilsə yalnız o marşrut.
+
+### Statuslar
+
+```
+open       → sürücülərə görünür, matç axtarılır
+fulfilled  → sərnişin uyğun səfəri bron etdi (avtomatik)
+cancelled  → sərnişin özü bağladı
+expired    → tarix keçdi (`demand:tidy` əmri bağlayır)
+```
+
+### Bildirişlər
+
+İki yeni `notification.type`:
+
+| `type` | Kimə | Nə vaxt |
+|---|---|---|
+| `rideRequestMatched` | sərnişinə | marşrutunda uyğun səfər yarandı |
+| `rideRequestPosted` | sürücüyə | marşrutunda kimsə yer axtarır |
+
+`rideRequestMatched` deep-link üçün `ride_id` daşıyır; `rideRequestPosted`-də
+`ride_id` **null**-dur, keçid `payload.request_id`-yə görə qurulur.
+
+> Sərnişinə eyni tələb üçün **gündə bir dəfədən çox** push getmir: bir
+> marşrutda beş elan verən sürücü telefonu beş dəfə oyadardı.
+
+---
+
+## 20. Tələb statistikası və qiymət təklifi
+
+### GET `/demand?from_city_id=1&to_city_id=9`
+
+```json
+{ "data": {
+  "searches": 43, "requests": 6, "requested_seats": 9,
+  "active_rides": 2, "seats_available": 3, "window_days": 7
+}}
+```
+
+`searches` — son 7 gündə həmin marşrutu axtaran **fərqli istifadəçi** sayı
+(`recent_searches`-də `(user, from, to)` unikaldır).
+
+### GET `/demand/top`
+Sürücünün ana ekranı üçün ən çox tələb olunan 5 marşrut. Şəhər sorğudan yox,
+sürücünün profilindən götürülür. Sıralama xam axtarış sayına görə deyil,
+**qarşılanmamış tələbə** görədir — elanı bol olan marşrut siyahıya düşmür.
+
+Hər sətirdə `/demand` sahələri + `from_city`, `to_city`, `score`.
+
+### GET `/price-suggestion?from_city_id=1&to_city_id=9`
+
+```json
+{ "data": {
+  "suggested": 15.0, "min": 12.0, "max": 18.0,
+  "source": "history", "sample_size": 24,
+  "distance_km": 225.4, "fuel_estimate": 21.6
+}}
+```
+
+`source`: `history` (marşrutdakı elanların medianı, ≥3 nümunə) ·
+`distance` (koordinatlara görə) · `none` (heç biri — `suggested` **null**).
+
+> `null` gələndə klient heç nə göstərməməlidir. Uydurma rəqəm susmaqdan pisdir.
+
+---
+
+## 21. Böyümə funksiyaları
+
+### Səfər obyektinə əlavə sahələr
+
+| Sahə | Məna |
+|---|---|
+| `women_only` | yalnız qadın sərnişin qəbul edən səfər |
+| `is_boosted` | dəvət mükafatı ilə axtarışın başındadır |
+| `share_url` | `https://<domen>/r/{id}` — ictimai səhifə |
+
+`POST /rides` və `PUT /rides/{id}` `women_only` qəbul edir. **Yalnız
+`gender=female` olan sürücü** onu `true` edə bilər → əks halda `422`.
+
+Bron cəhdi: `women_only` səfərə `gender != female` sərnişin müraciət etsə
+`422`.
+
+### Axtarış filtrləri (`GET /rides`)
+
+| Parametr | Dəyər |
+|---|---|
+| `driver_gender` | `male` \| `female` |
+| `women_only` | `1` |
+| `instant_only` | `1` |
+| `verified_only` | `1` |
+
+### Təkrar elan
+
+`POST /rides/{id}/repeat` → 201
+
+| Sahə | Qayda |
+|---|---|
+| `departure_at` | **məcburi**, gələcək tarix |
+| `repeat_weeks` | ixtiyari, 1–8 — həftəlik təkrar |
+
+`POST /rides` də `repeat_weeks` qəbul edir. Hər iki cavabda `created_count`
+gəlir; `data` birinci yaradılmış səfərdir.
+
+### Sürücü statistikası
+
+`stats` blokuna üç sahə əlavə olundu (həm `/me`, həm qısa profil):
+
+| Sahə | Məna |
+|---|---|
+| `driver_response_rate` | gələn sorğuların neçə %-inə cavab verib (0–100) |
+| `driver_response_minutes` | orta cavab vaxtı (dəqiqə) |
+| `driver_tier` | `new` \| `rising` \| `trusted` |
+
+> İlk ikisi **3 sorğudan az olanda `null`** qayıdır: bir sorğuya cavab vermiş
+> sürücünün "100%" görünməsi yalan siqnaldır.
+
+`is_verified` qısa profildə gəlir — sənədləri təsdiqlənmiş sürücü. Əlaqə
+yüklənməyibsə **açar ümumiyyətlə olmur** (§16.5): "bilinmir" ilə
+"təsdiqlənməyib" fərqli şeylərdir.
+
+### Təkrar bron (409 qaydası dəyişdi)
+
+Əvvəl qayda qalıcı idi. İndi:
+
+- sərnişin **özü ləğv edibsə** → bir dəfə yenidən müraciət edə bilər;
+- sürücü rədd edibsə və ya ləğv edibsə → `409`, dəyişməz;
+- limit keçiləndə → `409` «təkrar müraciət limitini keçmisən».
+
+### Dəvət sistemi
+
+`GET /me/referral`
+
+```json
+{ "data": {
+  "code": "K7MQ2P", "invited_count": 4, "active_count": 2,
+  "reward_days": 7, "boost_until": "2026-10-05T12:00:00+04:00"
+}}
+```
+
+Kod `/me` cavabında da var (`referral_code`). `POST /auth/phone/verify`
+ixtiyari `referral_code` qəbul edir — **yalnız yeni hesabda** işləyir.
+
+Mükafat pul deyil: dəvət olunan ilk səfərini edəndə dəvət edənin elanları
+7 gün axtarışın başında çıxır (maksimum 60 gün yığılır).
+
+---
+
+## 22. Telemetriya
+
+### POST `/events` → 202 — açıq
+
+```json
+{
+  "anonymous_id": "b3f1...",
+  "platform": "android",
+  "app_version": "1.1.0+7",
+  "events": [
+    { "name": "search_empty", "params": { "from_city_id": 1, "to_city_id": 9 },
+      "occurred_at": "2026-09-22T10:00:00+04:00" }
+  ]
+}
+```
+
+Bir sorğuda ≤50 hadisə. Cavab: `{ "accepted": 1 }`.
+
+- Ağ siyahıdan kənar `name` **sakitcə atılır** (xəta qaytarılmır) — tətbiqin
+  yeni versiyasındakı bir hadisə bütün dəstəni itirməməlidir.
+- `params`-dan şəxsi sahələr (`phone`, `name`, `message`, `token`, …) server
+  tərəfdə **kəsilir**; yalnız sadə dəyərlər, ≤12 açar saxlanılır.
+- `anonymous_id` girişdən əvvəlki addımları bağlayır.
+
+Qəbul edilən adlar: `app_open`, `onboarding_done`, `signin_started`,
+`signin_completed`, `profile_completed`, `search_performed`, `search_empty`,
+`ride_viewed`, `ride_request_created`, `ride_request_opened`,
+`booking_requested`, `booking_confirmed`, `booking_cancelled`,
+`publish_started`, `publish_completed`, `ride_repeated`, `vehicle_added`,
+`documents_uploaded`, `ride_shared`, `mode_switched`, `referral_shared`,
+`review_submitted`.
+
+---
+
+## 23. SMS və OTP
+
+`POST /auth/phone/request` artıq kodu **SMS ilə göndərir**
+(`config/sms.php`). Cavabda:
+
+| Sahə | Nə vaxt |
+|---|---|
+| `code` | yalnız `OTP_EXPOSE_CODE=true` **və** `APP_ENV != production` |
+| `delivery_failed` | provayder qoşulub, amma sorğu alınmayıb |
+
+`delivery_failed` gələndə kod bazada **hələ də etibarlıdır** — klient
+"SMS gecikə bilər" deməli, axını dayandırmamalıdır.
+
+---
+
+## 24. Rejim keçidi
+
+`PUT /me/mode` artıq **tam profil** qaytarır (`GET /me` ilə eyni gövdə) ki,
+klient sessiyanı ikinci sorğu etmədən yeniləsin.
+
+Rejim tətbiqdə profil ekranından da dəyişdirilir — əvvəl yalnız giriş
+ekranında seçilirdi və dəyişmək üçün çıxıb yenidən OTP ilə girmək lazım idi.

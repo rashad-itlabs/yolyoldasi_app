@@ -268,6 +268,14 @@ class _NotificationsView extends StatelessWidget {
         palette.warning,
       ),
       NotificationType.rideReminder => (Icons.alarm_rounded, palette.info),
+      NotificationType.rideRequestMatched => (
+        Icons.auto_awesome_rounded,
+        palette.success,
+      ),
+      NotificationType.rideRequestPosted => (
+        Icons.campaign_rounded,
+        context.colors.primary,
+      ),
       NotificationType.rideCancelled => (
         Icons.no_transfer_rounded,
         palette.danger,

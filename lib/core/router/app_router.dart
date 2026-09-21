@@ -20,9 +20,13 @@ import '../../features/profile/presentation/pages/documents_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_setup_page.dart';
 import '../../features/profile/presentation/pages/public_profile_page.dart';
+import '../../features/profile/presentation/pages/referral_page.dart';
 import '../../features/profile/presentation/pages/vehicle_page.dart';
 import '../../features/reviews/presentation/pages/my_reviews_page.dart';
 import '../../features/reviews/presentation/pages/write_review_page.dart';
+import '../../features/ride_requests/presentation/pages/incoming_requests_page.dart';
+import '../../features/ride_requests/presentation/pages/ride_requests_page.dart';
+import '../../features/rides/presentation/bloc/publish_ride/publish_ride_bloc.dart';
 import '../../features/rides/presentation/pages/my_rides_page.dart';
 import '../../features/rides/presentation/pages/publish_ride_page.dart';
 import '../../features/rides/presentation/pages/ride_detail_page.dart';
@@ -166,6 +170,11 @@ GoRouter buildRouter({
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (_, _) => const MyReviewsPage(),
                   ),
+                  GoRoute(
+                    path: Routes.referralPath,
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (_, _) => const ReferralPage(),
+                  ),
                 ],
               ),
             ],
@@ -183,12 +192,32 @@ GoRouter buildRouter({
       GoRoute(
         path: Routes.publishRide,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const PublishRidePage(),
+        // `extra` carries a route the driver already chose — from a
+        // passenger's request or from the demand list. Anything else that
+        // lands here is ignored rather than crashing the builder.
+        builder: (_, state) => PublishRidePage(
+          prefill: state.extra is RidePrefill
+              ? state.extra! as RidePrefill
+              : null,
+        ),
       ),
       GoRoute(
         path: '/rides/mine',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const MyRidesPage(),
+      ),
+
+      // Declared before `/ride-requests` itself so "incoming" is never read as
+      // a request id — same reason `publish` comes before `/ride/:rideId`.
+      GoRoute(
+        path: Routes.rideRequestsIncoming,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const IncomingRequestsPage(),
+      ),
+      GoRoute(
+        path: Routes.rideRequests,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const RideRequestsPage(),
       ),
       GoRoute(
         path: Routes.rideDetailPath,

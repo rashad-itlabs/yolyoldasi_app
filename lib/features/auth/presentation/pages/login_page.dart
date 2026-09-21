@@ -2,10 +2,13 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/extensions/context_extensions.dart';
+import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/analytics.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/utils/phone_number.dart';
@@ -64,6 +67,18 @@ class _LoginPageState extends State<LoginPage> {
         // as soon as it flips. The chosen mode rides along, so the first screen
         // the user lands on is already the right side of the app.
         if (state.session != null) {
+          // The end of the sign-up funnel. `is_new_user` is what separates a
+          // returning user from an acquisition, and `has_referral` says
+          // whether an invite brought them.
+          context.read<Analytics>().log(
+            Ev.signInCompleted,
+            params: {
+              'mode': state.mode.apiValue,
+              'is_new_user': state.session!.isNewUser,
+              'has_referral': state.referralCode.trim().isNotEmpty,
+            },
+          );
+
           context.read<SessionBloc>().add(
             SessionSignedIn(state.session!, mode: state.mode),
           );
@@ -74,8 +89,29 @@ class _LoginPageState extends State<LoginPage> {
         _otpKey.currentState?.clear();
       },
       builder: (context, state) {
+        final l10n = context.l10n;
+
         return DismissKeyboard(
           child: AppScaffold(
+            // The way out of the sign-in screen.
+            //
+            // Browsing does not need an account (API.md §18), so this screen is
+            // an offer rather than a gate — and an offer needs a "no". Without
+            // it, anyone who arrives here by pressing a button they did not
+            // mean to is stuck asking for an SMS to get back to the search
+            // form.
+            //
+            // `go`, not `pop`: the screen is reached both by a push (from a
+            // booking button) and by a replace (from onboarding), and only one
+            // of those has anything to pop back to.
+            actions: [
+              if (state.step.isPhone)
+                TextButton(
+                  onPressed: () => context.go(Routes.home),
+                  child: Text(l10n.skipSignIn),
+                ),
+              HGap.sm,
+            ],
             body: SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(
@@ -169,6 +205,16 @@ class _LoginPageState extends State<LoginPage> {
         onChanged: (value) =>
             context.read<PhoneSignInBloc>().add(PhoneSignInPhoneChanged(value)),
         onSubmitted: (_) => state.canRequestCode ? _requestCode() : null,
+      ),
+
+      // Folded away rather than shown outright: almost nobody arrives with a
+      // code, and an empty field above the sign-in button would read as one
+      // more thing being asked for.
+      VGap.md,
+      _ReferralField(
+        onChanged: (value) => context.read<PhoneSignInBloc>().add(
+          PhoneSignInReferralChanged(value),
+        ),
       ),
 
       VGap.xl,
@@ -371,6 +417,51 @@ class _TermsTextState extends State<_TermsText> {
       ),
       textAlign: TextAlign.center,
       style: base,
+    );
+  }
+}
+
+
+/// The optional invite-code field, collapsed until asked for.
+class _ReferralField extends StatefulWidget {
+  const _ReferralField({required this.onChanged});
+
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_ReferralField> createState() => _ReferralFieldState();
+}
+
+class _ReferralFieldState extends State<_ReferralField> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    if (!_expanded) {
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          onPressed: () => setState(() => _expanded = true),
+          icon: const Icon(Icons.card_giftcard_rounded, size: 18),
+          label: Text(l10n.referralCodeHint),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(0, 36),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      );
+    }
+
+    return AppTextField(
+      label: l10n.referralCode,
+      hint: l10n.referralCodeHint,
+      autofocus: true,
+      prefixIcon: Icons.card_giftcard_rounded,
+      textCapitalization: TextCapitalization.characters,
+      maxLength: 12,
+      onChanged: widget.onChanged,
     );
   }
 }

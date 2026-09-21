@@ -61,8 +61,19 @@ class AuthRepositoryImpl implements AuthRepository {
   FutureResult<AuthSession> verifyCode({
     required String phone,
     required String code,
+    String? referralCode,
   }) async {
-    final result = await _api.verifyCode(phone: phone, code: code.trim());
+    final trimmedReferral = referralCode?.trim();
+
+    final result = await _api.verifyCode(
+      phone: phone,
+      code: code.trim(),
+      // Empty is the same as absent; sending `""` would be a field the server
+      // has to make sense of for no reason.
+      referralCode: (trimmedReferral?.isEmpty ?? true)
+          ? null
+          : trimmedReferral!.toUpperCase(),
+    );
 
     if (result case Ok(:final value)) {
       // Nothing is stored until the API has issued a token, so a failed verify

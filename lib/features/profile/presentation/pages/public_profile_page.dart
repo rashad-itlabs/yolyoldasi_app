@@ -33,7 +33,9 @@ class PublicProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final asDriver = context.read<SessionBloc>().state.isDriverMode;
+    final session = context.read<SessionBloc>().state;
+    final asDriver = session.isDriverMode;
+    final isSignedIn = session.user != null;
 
     return MultiBlocProvider(
       providers: [
@@ -47,11 +49,28 @@ class PublicProfilePage extends StatelessWidget {
         // particular person is still owed a review. The scope follows the side
         // the viewer is on: a passenger's own bookings, a driver's incoming
         // ones.
+        //
+        // The bloc is always provided — the view below reads it — but it is
+        // only asked to load for a signed-in viewer. This page is reachable
+        // without an account now (API.md §18), and `GET /bookings` is not:
+        // firing it anyway would spend a guaranteed 401 on every guest visit
+        // to a driver's profile, for a list that can only ever be empty for
+        // them.
         BlocProvider<BookingsListBloc>(
-          create: (context) => BookingsListBloc(
-            bookings: context.read<BookingRepository>(),
-            scope: asDriver ? BookingScope.incoming : BookingScope.mine,
-          )..add(const BookingsListFilterChanged(BookingStatus.completed)),
+          create: (context) {
+            final bloc = BookingsListBloc(
+              bookings: context.read<BookingRepository>(),
+              scope: asDriver ? BookingScope.incoming : BookingScope.mine,
+            );
+
+            if (isSignedIn) {
+              bloc.add(
+                const BookingsListFilterChanged(BookingStatus.completed),
+              );
+            }
+
+            return bloc;
+          },
         ),
       ],
       child: _PublicProfileView(userId: userId),

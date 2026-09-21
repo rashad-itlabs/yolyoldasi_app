@@ -45,6 +45,22 @@ class SessionUserUpdated extends SessionEvent {
 }
 
 /// The onboarding carousel was dismissed. Device-local, but the router reads it.
+/// The user asked to switch between passenger and driver from the profile tab.
+///
+/// The mode used to be fixed at sign-in, changeable only by signing out and
+/// doing the OTP again. In practice the same person drives to their home
+/// district on Friday and rides back on Monday, so that lock halved what every
+/// account was worth — and it hid the driver half of the app from every
+/// passenger who owned a car, which is the cheapest source of drivers there is.
+class SessionModeRequested extends SessionEvent {
+  const SessionModeRequested(this.mode);
+
+  final UserMode mode;
+
+  @override
+  List<Object?> get props => [mode];
+}
+
 class SessionOnboardingSeen extends SessionEvent {
   const SessionOnboardingSeen();
 }

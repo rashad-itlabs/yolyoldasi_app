@@ -6,6 +6,7 @@ import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/upload_file.dart';
 import '../../../../core/types.dart';
 import '../../domain/entities/app_user.dart';
+import '../../domain/entities/referral.dart';
 import '../../domain/entities/user_enums.dart';
 import '../models/user_model.dart';
 
@@ -42,6 +43,9 @@ class UserApiService {
       _client.getObject(Api.user(userId), parse: PublicUserModel.fromJson);
 
   /// `GET /me/notification-preferences`
+  FutureResult<ReferralSummary> referral() =>
+      _client.getObject(Api.meReferral, parse: ReferralModel.fromJson);
+
   FutureResult<NotificationPreferences> notificationPreferences() =>
       _client.getObject(
         Api.meNotificationPreferences,

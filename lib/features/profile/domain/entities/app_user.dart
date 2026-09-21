@@ -14,6 +14,9 @@ class UserStats extends Equatable {
     this.passengerRating = 0,
     this.passengerReviewCount = 0,
     this.passengerTripCount = 0,
+    this.driverResponseRate,
+    this.driverResponseMinutes,
+    this.driverTier = DriverTier.newcomer,
   });
 
   final double driverRating;
@@ -24,7 +27,24 @@ class UserStats extends Equatable {
   final int passengerReviewCount;
   final int passengerTripCount;
 
+  /// Share of booking requests this driver answered at all, 0–100.
+  ///
+  /// Null below three requests, and the API is the one that decides that: a
+  /// driver who answered their single request would otherwise read as "100%",
+  /// which is a promise the number cannot keep (API.md §21).
+  final int? driverResponseRate;
+
+  /// Average minutes to an answer. Null under the same rule.
+  final int? driverResponseMinutes;
+
+  /// Rating and trip count read as one word.
+  final DriverTier driverTier;
+
   static const UserStats empty = UserStats();
+
+  /// Whether the "usually answers within…" line has anything to say.
+  bool get hasResponseStats =>
+      driverResponseRate != null && driverResponseMinutes != null;
 
   double ratingFor(UserMode mode) =>
       mode.isDriver ? driverRating : passengerRating;
@@ -56,6 +76,9 @@ class UserStats extends Equatable {
     passengerRating,
     passengerReviewCount,
     passengerTripCount,
+    driverResponseRate,
+    driverResponseMinutes,
+    driverTier,
   ];
 }
 
@@ -239,6 +262,7 @@ class PublicUser extends Equatable {
     this.birthYear,
     this.city,
     this.hasDriverProfile = false,
+    this.isVerified,
     this.stats = UserStats.empty,
   });
 
@@ -249,7 +273,20 @@ class PublicUser extends Equatable {
   final int? birthYear;
   final City? city;
   final bool hasDriverProfile;
+
+  /// Whether the driver's four documents are approved (API.md §21).
+  ///
+  /// Three states, not two. `null` means the response did not carry the key —
+  /// "not known here", which is different from "not verified". Rendering an
+  /// unknown as unverified would quietly strip the badge off an approved
+  /// driver on any screen that happens not to load the relation.
+  final bool? isVerified;
+
   final UserStats stats;
+
+  /// The only question the badge asks. Unknown reads as no badge, which is
+  /// right: a badge is a claim, and we only make it when the server said so.
+  bool get showsVerifiedBadge => isVerified == true;
 
   int? get age => birthYear == null ? null : DateTime.now().year - birthYear!;
 
@@ -270,6 +307,7 @@ class PublicUser extends Equatable {
     birthYear,
     city,
     hasDriverProfile,
+    isVerified,
     stats,
   ];
 }

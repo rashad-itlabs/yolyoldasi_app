@@ -45,6 +45,10 @@ abstract final class AuthSessionModel {
       phone: user.str('phone'),
       activeMode: UserMode.fromApi(user.strOrNull('active_mode')),
       hasDriverProfile: user.flag('has_driver_profile'),
+      // Top level, not inside `user` — and only present on the phone-code
+      // flow (API.md §3). Absent reads as `false`, which is the safe way
+      // round: a returning user miscounted as new would inflate acquisition.
+      isNewUser: json.flag('is_new_user'),
     );
   }
 }

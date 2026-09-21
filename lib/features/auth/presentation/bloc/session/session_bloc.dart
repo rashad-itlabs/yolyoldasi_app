@@ -36,6 +36,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     on<SessionSignedIn>(_onSignedIn);
     on<SessionRefreshed>(_onRefreshed);
     on<SessionUserUpdated>(_onUserUpdated);
+    on<SessionModeRequested>(_onModeRequested);
     on<SessionOnboardingSeen>(_onOnboardingSeen);
     on<SessionSignOutRequested>(_onSignOutRequested);
     on<SessionDeleteAccountRequested>(_onDeleteAccountRequested);
@@ -196,6 +197,30 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       case Err(:final failure):
         emit(state.copyWith(user: () => user, failure: () => failure));
     }
+  }
+
+  /// The profile tab's mode switch.
+  ///
+  /// Guarded here rather than at the call site so the rule lives with the
+  /// session: `PUT /me/mode` answers 422 for `driver` without a car, and the
+  /// screen should send the user to add one instead of showing them an error.
+  Future<void> _onModeRequested(
+    SessionModeRequested event,
+    Emitter<SessionState> emit,
+  ) async {
+    final user = state.user;
+    if (user == null || user.activeMode == event.mode) return;
+
+    if (event.mode.isDriver && !user.hasDriverProfile) {
+      emit(
+        state.copyWith(
+          failure: () => const ValidationFailure(FailureCode.driverProfileRequired),
+        ),
+      );
+      return;
+    }
+
+    await _applyMode(event.mode, emit);
   }
 
   Future<void> _onOnboardingSeen(

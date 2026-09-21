@@ -134,6 +134,35 @@ class ApiClient {
     );
   }
 
+  /// The whole response body, envelope and all.
+  ///
+  /// For the handful of endpoints that put something useful *beside* `data`
+  /// rather than inside it — `POST /ride-requests` answers with the request in
+  /// `data` and the rides that already match it in `matches` (API.md §19).
+  /// Unwrapping would throw the second half away.
+  FutureResult<T> getFull<T>(
+    String path, {
+    Json? query,
+    required T Function(Json body) parse,
+  }) {
+    return _send(
+      () => _dio.get<dynamic>(path, queryParameters: _query(query)),
+      (body) => parse(body is Map ? Json.from(body) : const {}),
+    );
+  }
+
+  /// [getFull] for a write.
+  FutureResult<T> postFull<T>(
+    String path, {
+    Json? body,
+    required T Function(Json body) parse,
+  }) {
+    return _send(
+      () => _dio.post<dynamic>(path, data: body),
+      (data) => parse(data is Map ? Json.from(data) : const {}),
+    );
+  }
+
   /// A call whose response body carries nothing the caller needs.
   FutureResult<void> send(
     String method,

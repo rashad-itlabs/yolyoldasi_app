@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../core/di/app_dependencies.dart';
 import '../core/localization/app_localizations.dart';
 import '../core/router/app_router.dart';
+import '../core/services/analytics.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/layout_size.dart';
 import '../features/app_update/presentation/bloc/app_update/app_update_bloc.dart';
@@ -21,8 +22,9 @@ import '../features/profile/domain/repositories/user_repository.dart';
 import '../features/profile/presentation/bloc/driver_profile/driver_profile_bloc.dart';
 import '../features/reports/domain/repositories/report_repository.dart';
 import '../features/reviews/domain/repositories/review_repository.dart';
+import '../features/ride_requests/domain/repositories/ride_request_repository.dart';
+import '../features/rides/domain/repositories/demand_repository.dart';
 import '../features/rides/domain/repositories/ride_repository.dart';
-import '../features/rides/presentation/bloc/recent_searches/recent_searches_bloc.dart';
 import '../features/rides/presentation/bloc/ride_search/ride_search_bloc.dart';
 import '../features/settings/presentation/bloc/settings/settings_bloc.dart';
 import '../features/shell/presentation/bloc/badges/badges_bloc.dart';
@@ -46,6 +48,13 @@ class YolYoldasiApp extends StatelessWidget {
         RepositoryProvider<DriverRepository>.value(value: dependencies.drivers),
         RepositoryProvider<CityRepository>.value(value: dependencies.cities),
         RepositoryProvider<RideRepository>.value(value: dependencies.rides),
+        RepositoryProvider<RideRequestRepository>.value(
+          value: dependencies.rideRequests,
+        ),
+        RepositoryProvider<DemandRepository>.value(value: dependencies.demand),
+        // Not a repository, but it belongs to the same layer and every screen
+        // reaches for it the same way.
+        RepositoryProvider<Analytics>.value(value: dependencies.analytics),
         RepositoryProvider<BookingRepository>.value(
           value: dependencies.bookings,
         ),
@@ -102,9 +111,6 @@ class YolYoldasiApp extends StatelessWidget {
           // top-level route, so the query they share is held above both.
           BlocProvider<RideSearchBloc>(
             create: (_) => RideSearchBloc(rides: dependencies.rides),
-          ),
-          BlocProvider<RecentSearchesBloc>(
-            create: (_) => RecentSearchesBloc(rides: dependencies.rides),
           ),
           BlocProvider<BadgesBloc>(
             create: (_) => BadgesBloc(

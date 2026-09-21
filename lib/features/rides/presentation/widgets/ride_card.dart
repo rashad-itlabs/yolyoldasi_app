@@ -45,6 +45,7 @@ class RideCard extends StatelessWidget {
     final seatsLeft = ride.seatsLeft;
     final isScarce = seatsLeft > 0 && seatsLeft <= 1;
     final vehicle = ride.vehicle;
+    final driverStats = ride.driver.stats;
 
     return AppCard(
       onTap: onTap,
@@ -73,6 +74,17 @@ class RideCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                // Ahead of the instant-booking chip: for the passenger it
+                // filters out, this is not a perk but the deciding fact.
+                if (ride.womenOnly) ...[
+                  StatusChip(
+                    label: l10n.womenOnlyRide,
+                    tone: ChipTone.info,
+                    icon: Icons.woman_rounded,
+                    dense: true,
+                  ),
+                  HGap.sm,
+                ],
                 if (ride.instantBooking) ...[
                   StatusChip(
                     label: l10n.instantBooking,
@@ -118,9 +130,11 @@ class RideCard extends StatelessWidget {
                     name: ride.driver.fullName,
                     photoUrl: ride.driver.photoUrl,
                     size: Sizes.avatarSm + 6,
-                    // The API exposes no per-user verification flag; having a
-                    // driver profile at all is the closest signal it gives.
-                    isVerified: ride.driver.hasDriverProfile,
+                    // The real flag now (API.md §21), not "has a driver
+                    // profile". Showing a tick for every driver made the tick
+                    // mean nothing — and gave a driver no reason to bother
+                    // uploading documents.
+                    isVerified: ride.driver.showsVerifiedBadge,
                   ),
                   HGap.md,
                   Expanded(
@@ -145,6 +159,16 @@ class RideCard extends StatelessWidget {
                               ),
                               compact: true,
                             ),
+                            // Only the top tier gets a chip. A badge on every
+                            // card is a badge on none.
+                            if (driverStats.driverTier.isBadgeworthy) ...[
+                              HGap.sm,
+                              StatusChip(
+                                label: l10n.tierTrusted,
+                                tone: ChipTone.success,
+                                dense: true,
+                              ),
+                            ],
                           ],
                         ),
                         if (vehicle != null) ...[
@@ -165,6 +189,25 @@ class RideCard extends StatelessWidget {
                                 ),
                               ),
                             ],
+                          ),
+                        ],
+
+                        // The answer to "if I ask, will anyone reply?" — the
+                        // one thing a passenger cannot find out for themselves
+                        // and the reason most requests go unsent. Absent under
+                        // three requests, where the figure would be a guess
+                        // dressed as a fact (API.md §21).
+                        if (driverStats.hasResponseStats) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.respondsWithin(
+                              driverStats.driverResponseMinutes!,
+                            ),
+                            style: context.text.labelSmall?.copyWith(
+                              color: palette.textTertiary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ],

@@ -477,20 +477,4 @@ void main() {
     });
   });
 
-  group('RecentSearchModel', () {
-    test('parses searched_date as a plain calendar day', () {
-      // §1: `searched_date` is the one field that is not ISO 8601.
-      final search = RecentSearchModel.fromJson({
-        'from_city': {'id': 1, 'name': 'Bakı'},
-        'to_city': {'id': 9, 'name': 'Qəbələ'},
-        'searched_date': '2026-09-20',
-        'seats': 2,
-        'searched_at': '2026-09-16T12:00:00+04:00',
-      });
-
-      expect(search.searchedDate, DateTime(2026, 9, 20));
-      expect(search.seats, 2);
-      expect(search.toQuery().fromCityId, 1);
-    });
-  });
 }

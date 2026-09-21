@@ -16,10 +16,10 @@ import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../bookings/domain/entities/booking.dart';
 import '../../../bookings/domain/repositories/booking_repository.dart';
 import '../../../bookings/presentation/bloc/bookings_list/bookings_list_bloc.dart';
+import '../../../ride_requests/domain/repositories/ride_request_repository.dart';
+import '../../../ride_requests/presentation/bloc/ride_requests/ride_requests_bloc.dart';
 import '../../../shell/presentation/bloc/badges/badges_bloc.dart';
-import '../../domain/entities/recent_search.dart';
 import '../../domain/repositories/ride_repository.dart';
-import '../bloc/recent_searches/recent_searches_bloc.dart';
 import '../bloc/ride_browse/ride_browse_bloc.dart';
 import '../bloc/ride_search/ride_search_bloc.dart';
 import '../widgets/ride_card.dart';
@@ -48,6 +48,26 @@ class SearchHomePage extends StatelessWidget {
               RideBrowseBloc(rides: context.read<RideRepository>())
                 ..add(const RideBrowseRequested()),
         ),
+        // Page level rather than inside the card that draws it, so both
+        // pull-to-refresh and the return from the requests screen can reach
+        // it. Owned by the card, it kept showing a request the user had just
+        // closed on the other screen — two blocs, two copies of the list, and
+        // only one of them was told.
+        BlocProvider<RideRequestsBloc>(
+          create: (context) {
+            final bloc = RideRequestsBloc(
+              requests: context.read<RideRequestRepository>(),
+            );
+
+            // `/ride-requests` needs a token, and this screen is open to
+            // guests (API.md §18).
+            if (context.read<SessionBloc>().state.user != null) {
+              bloc.add(const RideRequestsRequested());
+            }
+
+            return bloc;
+          },
+        ),
       ],
       child: const _SearchHomeView(),
     );
@@ -68,7 +88,6 @@ class _SearchHomeViewState extends State<_SearchHomeView> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
-    context.read<RecentSearchesBloc>().add(const RecentSearchesRequested());
   }
 
   @override
@@ -90,12 +109,21 @@ class _SearchHomeViewState extends State<_SearchHomeView> {
   }
 
   Future<void> _refresh() async {
-    context.read<RecentSearchesBloc>().add(const RecentSearchesRequested());
+    // Always: this is the open endpoint and the reason a guest is here.
+    context.read<RideBrowseBloc>().add(
+      const RideBrowseRequested(refresh: true),
+    );
+
+    // The rest are `/me`-shaped. Firing them without a token would answer 401,
+    // which the interceptor reports as an expired session — a confusing thing
+    // to happen to someone who never signed in.
+    if (context.read<SessionBloc>().state.user == null) return;
+
     context.read<BookingsListBloc>().add(
       const BookingsListRequested(refresh: true),
     );
-    context.read<RideBrowseBloc>().add(
-      const RideBrowseRequested(refresh: true),
+    context.read<RideRequestsBloc>().add(
+      const RideRequestsRequested(refresh: true),
     );
     context.read<BadgesBloc>().add(const BadgesRefreshed());
   }
@@ -113,6 +141,9 @@ class _SearchHomeViewState extends State<_SearchHomeView> {
     );
     final unread = context.select<BadgesBloc, int>(
       (bloc) => bloc.state.unreadNotifications,
+    );
+    final isGuest = context.select<SessionBloc, bool>(
+      (bloc) => bloc.state.user == null,
     );
     final topInset = MediaQuery.paddingOf(context).top;
 
@@ -149,6 +180,7 @@ class _SearchHomeViewState extends State<_SearchHomeView> {
                       ? l10n.appName
                       : l10n.greeting(fmt.shortName(user.name)),
                   unread: unread,
+                  isGuest: isGuest,
                 ),
               ),
 
@@ -159,10 +191,12 @@ class _SearchHomeViewState extends State<_SearchHomeView> {
                   Gap.page + context.columnInset,
                   0,
                 ),
-                // Publishing belongs to driver mode, and the mode is fixed at
-                // sign-in, so there is no "offer a ride" shortcut here.
+                // Publishing belongs to driver mode, and the switch lives in
+                // the profile tab, so there is no "offer a ride" shortcut here.
                 sliver: SliverList.list(
-                  children: const [_NextTripCard(), _RecentSearches()],
+                  children: isGuest
+                      ? const [_GuestPrompt()]
+                      : const [_NextTripCard(), _MyRequestsLink()],
                 ),
               ),
 
@@ -221,12 +255,21 @@ class _Hero extends StatelessWidget {
     required this.photoUrl,
     required this.greeting,
     required this.unread,
+    required this.isGuest,
   });
 
   final String? name;
   final String? photoUrl;
   final String greeting;
   final int unread;
+
+  /// Hides the notification bell.
+  ///
+  /// `/notifications` needs an account, so for a guest the router bounces it
+  /// straight back to this screen — a button that visibly does nothing. Better
+  /// to not offer it: the sign-in card below the search form is the one honest
+  /// way in.
+  final bool isGuest;
 
   /// Both blooms bleed off a side so only their soft part shows; the header
   /// clips the rest.
@@ -313,7 +356,11 @@ class _Hero extends StatelessWidget {
                               photoUrl: photoUrl,
                               size: Sizes.avatarMd,
                               borderColor: Colors.white.withValues(alpha: 0.35),
-                              onTap: () => context.push(Routes.profile),
+                              // A guest has no profile to open, so the tap
+                              // goes where it was always heading: sign-in.
+                              onTap: () => context.push(
+                                isGuest ? Routes.login : Routes.profile,
+                              ),
                             ),
                             HGap.md,
                             Expanded(
@@ -327,12 +374,14 @@ class _Hero extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            HGap.md,
-                            _HeaderAction(
-                              icon: Icons.notifications_none_rounded,
-                              badge: unread,
-                              onTap: () => context.push(Routes.notifications),
-                            ),
+                            if (!isGuest) ...[
+                              HGap.md,
+                              _HeaderAction(
+                                icon: Icons.notifications_none_rounded,
+                                badge: unread,
+                                onTap: () => context.push(Routes.notifications),
+                              ),
+                            ],
                           ],
                         ),
                         VGap.xxl,
@@ -520,52 +569,6 @@ class _DepartureBlock extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// `GET /me/recent-searches` — the last routes, as quick-repeat chips.
-class _RecentSearches extends StatelessWidget {
-  const _RecentSearches();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-
-    return BlocBuilder<RecentSearchesBloc, RecentSearchesState>(
-      builder: (context, state) {
-        if (!state.hasSearches) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: l10n.recentSearches,
-              actionLabel: l10n.clear,
-              onAction: () => context.read<RecentSearchesBloc>().add(
-                const RecentSearchesCleared(),
-              ),
-            ),
-            Wrap(
-              spacing: Gap.sm,
-              runSpacing: Gap.sm,
-              children: [
-                for (final search in state.visible)
-                  _RouteChip(
-                    search: search,
-                    onTap: () {
-                      context.read<RideSearchBloc>().add(
-                        RideSearchQueryReplaced(search.toQuery(), submit: true),
-                      );
-                      context.push(Routes.searchResults);
-                    },
-                  ),
-              ],
-            ),
-            VGap.xxl,
-          ],
-        );
-      },
     );
   }
 }
@@ -765,26 +768,133 @@ class _HeaderAction extends StatelessWidget {
   }
 }
 
-class _RouteChip extends StatelessWidget {
-  const _RouteChip({required this.search, required this.onTap});
-
-  final RecentSearch search;
-  final VoidCallback onTap;
+/// What a signed-out visitor sees where their own trips would be.
+///
+/// Deliberately small and below the search form: the point of letting people in
+/// without an account is that they can look first. A full-screen wall here
+/// would put the phone-number ask back exactly where it was.
+class _GuestPrompt extends StatelessWidget {
+  const _GuestPrompt();
 
   @override
   Widget build(BuildContext context) {
-    final code = context.l10n.languageCode;
+    final l10n = context.l10n;
 
-    return ActionChip(
-      onPressed: onTap,
-      avatar: Icon(
-        Icons.history_rounded,
-        size: 15,
-        color: context.palette.textTertiary,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Gap.lg),
+      child: AppCard(
+        onTap: () => context.push(Routes.login),
+        child: Row(
+          children: [
+            Icon(Icons.login_rounded, color: context.colors.primary),
+            HGap.lg,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.signInToBook, style: context.text.titleSmall),
+                  VGap.xs,
+                  Text(
+                    l10n.signInToContinue,
+                    style: context.text.bodySmall?.copyWith(
+                      color: context.palette.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: context.palette.textTertiary,
+            ),
+          ],
+        ),
       ),
-      label: Text(
-        '${search.fromCity.nameFor(code)} → ${search.toCity.nameFor(code)}',
-      ),
+    );
+  }
+}
+
+/// A way back to the requests this passenger has open.
+///
+/// Two jobs, and the second one is why it is always on screen.
+///
+/// With open requests it is the way back to them: a request posted from an
+/// empty search result must not disappear into a system the user cannot see,
+/// or "we will let you know" becomes something they take on faith.
+///
+/// With none it is the *only* place most passengers will ever learn the feature
+/// exists. Hiding it when empty made the entry point to a first request appear
+/// only after a first request had been made — and the other way in, the empty
+/// search result, is by definition a screen you reach only on a dead route.
+/// Anyone searching Baku–Ganja, where there are always rides, never found out
+/// they could ask for one.
+class _MyRequestsLink extends StatelessWidget {
+  const _MyRequestsLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return BlocBuilder<RideRequestsBloc, RideRequestsState>(
+      builder: (context, state) {
+        // Nothing at all until the first load answers: a card that appears
+        // saying "you have none" and then changes its mind reads as a bug.
+        if (!state.status.isSuccess) return const SizedBox.shrink();
+
+        final open = state.open;
+        final hasRequests = open.isNotEmpty;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: Gap.lg),
+          child: AppCard(
+            // Awaited: the requests screen is where a request gets closed,
+            // and this card is the first thing the user sees on the way
+            // back. Without the re-read it would still be offering the row
+            // they just cancelled.
+            onTap: () async {
+              final bloc = context.read<RideRequestsBloc>();
+              await context.push(Routes.rideRequests);
+              bloc.add(const RideRequestsRequested(refresh: true));
+            },
+            child: Row(
+              children: [
+                Icon(Icons.campaign_outlined, color: context.colors.primary),
+                HGap.lg,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasRequests
+                            ? l10n.myRideRequests
+                            : l10n.askDriversTitle,
+                        style: context.text.titleSmall,
+                      ),
+                      VGap.xs,
+                      Text(
+                        hasRequests
+                            ? '${open.first.fromCity.name} → '
+                                  '${open.first.toCity.name}'
+                                  '${open.length > 1 ? ' +${open.length - 1}' : ''}'
+                            : l10n.askDriversBody,
+                        style: context.text.bodySmall?.copyWith(
+                          color: context.palette.textSecondary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: context.palette.textTertiary,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

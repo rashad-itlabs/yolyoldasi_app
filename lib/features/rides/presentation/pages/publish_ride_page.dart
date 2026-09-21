@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/error/result.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/analytics.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/widgets/app_button.dart';
@@ -16,9 +18,12 @@ import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/route_timeline.dart';
+import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
 import '../../../profile/presentation/bloc/driver_profile/driver_profile_bloc.dart';
+import '../../domain/entities/route_demand.dart';
+import '../../domain/repositories/demand_repository.dart';
 import '../../domain/repositories/ride_repository.dart';
 import '../bloc/publish_ride/publish_ride_bloc.dart';
 import '../widgets/city_picker_sheet.dart';
@@ -29,10 +34,14 @@ import '../widgets/city_picker_sheet.dart';
 /// §9 lists exactly which fields an edit may touch, and the route and vehicle
 /// are not among them — the first step is read-only when editing.
 class PublishRidePage extends StatelessWidget {
-  const PublishRidePage({super.key, this.rideId});
+  const PublishRidePage({super.key, this.rideId, this.prefill});
 
   /// When set, the form edits that listing instead of creating a new one.
   final int? rideId;
+
+  /// A route the driver already picked elsewhere — from a passenger's request
+  /// or from the demand list. Ignored while editing, where the route is fixed.
+  final RidePrefill? prefill;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +52,7 @@ class PublishRidePage extends StatelessWidget {
           PublishRideBloc(rides: context.read<RideRepository>())..add(
             PublishRideStarted(
               rideId: rideId,
+              prefill: prefill,
               // A driver with one car never sees a picker.
               vehicleId: driver?.vehicle?.id,
               instantBookingDefault: driver?.instantBookingDefault ?? false,
@@ -71,7 +81,24 @@ class _PublishRideView extends StatelessWidget {
           HapticFeedback.mediumImpact();
           AppFeedback.success(
             context,
-            isEditing ? l10n.rideUpdated : l10n.ridePublished,
+            isEditing
+                ? l10n.rideUpdated
+                // A weekly repeat creates several listings in one submit, and
+                // saying "ride published" would understate what just happened.
+                : l10n.ridesPublished(state.draft.repeatWeeks),
+          );
+
+          context.read<Analytics>().log(
+            Ev.publishCompleted,
+            params: {
+              'from_city_id': state.draft.fromCityId,
+              'to_city_id': state.draft.toCityId,
+              'seats': state.draft.totalSeats,
+              'price': state.draft.pricePerSeat,
+              'women_only': state.draft.womenOnly,
+              'repeat_weeks': state.draft.repeatWeeks,
+              'instant_booking': state.draft.instantBooking,
+            },
           );
           if (isEditing) {
             context.pop();
@@ -148,8 +175,9 @@ class _PublishRideView extends StatelessWidget {
                         PublishStep.schedule => const _ScheduleStep(
                           key: ValueKey(1),
                         ),
-                        PublishStep.details => const _DetailsStep(
-                          key: ValueKey(2),
+                        PublishStep.details => _DetailsStep(
+                          key: const ValueKey(2),
+                          isEditing: isEditing,
                         ),
                       },
                     ),
@@ -514,7 +542,11 @@ class _ScheduleStep extends StatelessWidget {
 
 // ---------------------------------------------------------------- step three
 class _DetailsStep extends StatefulWidget {
-  const _DetailsStep({super.key});
+  const _DetailsStep({super.key, this.isEditing = false});
+
+  /// Editing one listing must never fan out into a weekly series, so the
+  /// repeat picker is hidden here.
+  final bool isEditing;
 
   @override
   State<_DetailsStep> createState() => _DetailsStepState();
@@ -525,6 +557,13 @@ class _DetailsStepState extends State<_DetailsStep> {
   late final TextEditingController _pickupController;
   late final TextEditingController _dropoffController;
   late final TextEditingController _noteController;
+
+  /// The server's answer for the current route, once it arrives.
+  PriceSuggestion? _suggestion;
+
+  /// The route the answer belongs to, so a changed route refetches and an
+  /// unchanged one does not.
+  (int, int)? _suggestionRoute;
 
   @override
   void initState() {
@@ -550,6 +589,33 @@ class _DetailsStepState extends State<_DetailsStep> {
     return value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
   }
 
+  /// Fetches the route's price hint once, from inside `build`.
+  ///
+  /// Called during build but never emits during it: the request is fired on
+  /// the next microtask and `setState` runs when it lands. Cheaper than a bloc
+  /// for what is one read whose only consumers are two widgets on this step.
+  void _ensureSuggestion(int? fromCityId, int? toCityId) {
+    if (fromCityId == null || toCityId == null) return;
+
+    final route = (fromCityId, toCityId);
+    if (_suggestionRoute == route) return;
+    _suggestionRoute = route;
+
+    final demand = context.read<DemandRepository>();
+
+    Future<void>.microtask(() async {
+      final result = await demand.priceFor(
+        fromCityId: fromCityId,
+        toCityId: toCityId,
+      );
+      if (!mounted || _suggestionRoute != route) return;
+
+      // A failure leaves `_suggestion` null and the local distance estimate
+      // stands in — a missing hint is not worth an error message.
+      if (result case Ok(:final value)) setState(() => _suggestion = value);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -561,10 +627,27 @@ class _DetailsStepState extends State<_DetailsStep> {
       builder: (context, state) {
         final bloc = context.read<PublishRideBloc>();
         final draft = state.draft;
-        final suggested = City.suggestedPrice(
-          cities.byId(draft.fromCityId),
-          cities.byId(draft.toCityId),
+
+        // The women-only switch is the driver's own gender, not a preference
+        // — and the server refuses it for anyone else.
+        final isWomanDriver = context.select<SessionBloc, bool>(
+          (bloc) => bloc.state.user?.gender.isFemale ?? false,
         );
+
+        // Asked for once per route and cached. The server answers from real
+        // listings on this route where it can and falls back to distance where
+        // it cannot, so the hint is the market's own number rather than ours.
+        _ensureSuggestion(draft.fromCityId, draft.toCityId);
+
+        // Until the request lands — and on a server that does not know the
+        // endpoint — the local distance estimate stands in, so the field is
+        // never left without a hint.
+        final suggested =
+            _suggestion?.suggested ??
+            City.suggestedPrice(
+              cities.byId(draft.fromCityId),
+              cities.byId(draft.toCityId),
+            );
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -657,6 +740,20 @@ class _DetailsStepState extends State<_DetailsStep> {
               ),
             ],
 
+            // ------------------------------------------------- earnings
+            // The whole motivation, in one line. A driver who never sees the
+            // number does not feel it: the trip is happening either way, the
+            // seats are empty either way, and we take no commission on
+            // filling them.
+            if (draft.pricePerSeat != null) ...[
+              VGap.lg,
+              _EarningsCard(
+                seats: draft.totalSeats,
+                pricePerSeat: draft.pricePerSeat!,
+                fuelEstimate: _suggestion?.fuelEstimate,
+              ),
+            ],
+
             VGap.xl,
             AppTextField(
               controller: _pickupController,
@@ -715,9 +812,128 @@ class _DetailsStepState extends State<_DetailsStep> {
                 ),
               ),
             ),
+
+            // ----------------------------------------------- women only
+            // Offered only to a woman driver: the server refuses it for
+            // anyone else (API.md §21), and a switch that produces a 422 is
+            // worse than no switch at all.
+            if (isWomanDriver) ...[
+              VGap.md,
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Gap.lg,
+                  vertical: Gap.sm,
+                ),
+                child: SwitchListTile.adaptive(
+                  value: draft.womenOnly,
+                  onChanged: (value) =>
+                      bloc.add(PublishRideFieldChanged(womenOnly: value)),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.womenOnly, style: context.text.titleSmall),
+                  subtitle: Text(
+                    l10n.womenOnlyHint,
+                    style: context.text.bodySmall,
+                  ),
+                ),
+              ),
+            ],
+
+            // -------------------------------------------- weekly repeat
+            // The weekly commuter is the driver worth keeping, and making
+            // them refill this form every Friday is how they are lost.
+            // Hidden while editing: changing one listing must never fan out
+            // into eight.
+            if (!widget.isEditing) ...[
+              VGap.xl,
+              Text(l10n.repeatWeeks, style: context.text.labelLarge),
+              VGap.sm,
+              Wrap(
+                spacing: Gap.sm,
+                runSpacing: Gap.sm,
+                children: [
+                  for (final weeks in const [1, 2, 4, 8])
+                    ChoiceChip(
+                      label: Text(l10n.repeatWeeksLabel(weeks)),
+                      selected: draft.repeatWeeks == weeks,
+                      onSelected: (_) =>
+                          bloc.add(PublishRideFieldChanged(repeatWeeks: weeks)),
+                    ),
+                ],
+              ),
+            ],
           ],
         );
       },
+    );
+  }
+}
+
+/// "3 × 15 ₼ = 45 ₼", with the fuel it offsets underneath.
+///
+/// Deliberately not framed as income. The honest pitch is that the cost of a
+/// trip already being made gets shared — which is also why the no-commission
+/// line sits right here, where the driver is looking at the number.
+class _EarningsCard extends StatelessWidget {
+  const _EarningsCard({
+    required this.seats,
+    required this.pricePerSeat,
+    this.fuelEstimate,
+  });
+
+  final int seats;
+  final double pricePerSeat;
+  final double? fuelEstimate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final fmt = context.fmt;
+    final palette = context.palette;
+    final total = pricePerSeat * seats;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.savings_outlined, color: context.colors.primary),
+              HGap.md,
+              Expanded(
+                child: Text(l10n.earningsTitle, style: context.text.titleSmall),
+              ),
+              Text(
+                fmt.price(total),
+                style: context.text.titleMedium?.copyWith(
+                  color: context.colors.primary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          VGap.sm,
+          Text(
+            l10n.earningsLine(seats, fmt.price(pricePerSeat), fmt.price(total)),
+            style: context.text.bodySmall?.copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+          if (fuelEstimate != null) ...[
+            VGap.xs,
+            Text(
+              '${l10n.earningsFuelNote}: ≈ ${fmt.price(fuelEstimate!)}',
+              style: context.text.bodySmall?.copyWith(
+                color: palette.textTertiary,
+              ),
+            ),
+          ],
+          VGap.sm,
+          Text(
+            l10n.earningsFree,
+            style: context.text.labelMedium?.copyWith(color: palette.success),
+          ),
+        ],
+      ),
     );
   }
 }

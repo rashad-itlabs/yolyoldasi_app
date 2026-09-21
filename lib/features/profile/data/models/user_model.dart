@@ -2,6 +2,7 @@ import '../../../../core/network/json_reader.dart';
 import '../../../../core/types.dart';
 import '../../../cities/data/models/city_model.dart';
 import '../../domain/entities/app_user.dart';
+import '../../domain/entities/referral.dart';
 import '../../domain/entities/user_enums.dart';
 
 /// `GET /me` (API.md §4).
@@ -66,6 +67,9 @@ abstract final class PublicUserModel {
       birthYear: json.integerOrNull('birth_year'),
       city: CityModel.fromJsonOrNull(json.childOrNull('city')),
       hasDriverProfile: json.flag('has_driver_profile'),
+      // Absent, not false, when the server did not load the driver profile —
+      // see the field's own note on `PublicUser`.
+      isVerified: json.flagOrNull('is_verified'),
       stats: UserStatsModel.fromJson(json.child('stats')),
     );
   }
@@ -90,6 +94,11 @@ abstract final class UserStatsModel {
       passengerRating: json.decimal('passenger_rating'),
       passengerReviewCount: json.integer('passenger_review_count'),
       passengerTripCount: json.integer('passenger_trip_count'),
+      // Null under three requests, and that is the server's call, not ours
+      // (API.md §21) — so `integerOrNull`, never a zero fallback.
+      driverResponseRate: json.integerOrNull('driver_response_rate'),
+      driverResponseMinutes: json.integerOrNull('driver_response_minutes'),
+      driverTier: DriverTier.fromApi(json.strOrNull('driver_tier')),
     );
   }
 }
@@ -116,4 +125,19 @@ abstract final class NotificationPreferencesModel {
     'reminders': prefs.reminders,
     'marketing': prefs.marketing,
   };
+}
+
+/// `GET /me/referral` (API.md §21).
+abstract final class ReferralModel {
+  static ReferralSummary fromJson(Json json) {
+    return ReferralSummary(
+      code: json.str('code'),
+      invitedCount: json.integer('invited_count'),
+      activeCount: json.integer('active_count'),
+      rewardDays: json.integer('reward_days', 7),
+      // Null when no boost is running — not a date in the past, which the UI
+      // would have to compare against anyway.
+      boostUntil: json.dateOrNull('boost_until'),
+    );
+  }
 }

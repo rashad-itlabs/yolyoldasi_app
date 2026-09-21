@@ -19,7 +19,10 @@ abstract final class Api {
   static const mePhoto = '/me/photo';
   static const meNotificationPreferences = '/me/notification-preferences';
   static const meDeviceTokens = '/me/device-tokens';
-  static const meRecentSearches = '/me/recent-searches';
+
+  /// Invite code, how many it brought in, and how long the reward still runs
+  /// (API.md §21).
+  static const meReferral = '/me/referral';
 
   // ------------------------------------------------------------------- cities
   static const cities = '/cities';
@@ -38,11 +41,37 @@ abstract final class Api {
   static String vehicle(int id) => '/vehicles/$id';
 
   // -------------------------------------------------------------------- rides
+  /// Open to guests, and the search screen relies on that: a first-time visitor
+  /// has to be able to see what is on offer before handing over a phone number
+  /// (API.md §18).
   static const rides = '/rides';
   static const ridesMine = '/rides/mine';
   static String ride(int id) => '/rides/$id';
   static String rideComplete(int id) => '/rides/$id/complete';
   static String rideBookings(int rideId) => '/rides/$rideId/bookings';
+
+  /// Re-publishes an existing listing on a new date — the two-tap path for the
+  /// driver who makes the same run every week (API.md §21).
+  static String rideRepeat(int id) => '/rides/$id/repeat';
+
+  // ------------------------------------------------------------ ride requests
+  /// The demand side of the marketplace: what passengers are looking for
+  /// (API.md §19).
+  static const rideRequests = '/ride-requests';
+  static const rideRequestsIncoming = '/ride-requests/incoming';
+  static String rideRequest(int id) => '/ride-requests/$id';
+
+  // ------------------------------------------------------------------- demand
+  /// How many people are searching a route, and what it usually costs
+  /// (API.md §20).
+  static const demand = '/demand';
+  static const demandTop = '/demand/top';
+  static const priceSuggestion = '/price-suggestion';
+
+  // --------------------------------------------------------------- telemetry
+  /// Open, on purpose: the steps before sign-in are where the funnel leaks
+  /// most (API.md §22).
+  static const events = '/events';
 
   // ----------------------------------------------------------------- bookings
   static const bookings = '/bookings';

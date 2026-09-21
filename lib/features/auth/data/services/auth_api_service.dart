@@ -30,9 +30,17 @@ class AuthApiService {
   FutureResult<AuthSession> verifyCode({
     required String phone,
     required String code,
+    String? referralCode,
   }) => _client.post(
     Api.authPhoneVerify,
-    body: {'phone': phone, 'code': code, 'device': 'app'},
+    body: {
+      'phone': phone,
+      'code': code,
+      'device': 'app',
+      // Only attaches on a brand-new account; the server ignores it otherwise
+      // (API.md §21), so there is nothing to check here.
+      'referral_code': ?referralCode,
+    },
     parse: AuthSessionModel.fromJson,
   );
 

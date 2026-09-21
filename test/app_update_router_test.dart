@@ -144,6 +144,8 @@ void main() {
         ),
         Routes.onboarding,
       );
+      // Browsing is open to a signed-out visitor now: the search screen has
+      // to be reachable before anyone hands over a phone number (API.md §18).
       expect(
         redirect(
           session: const SessionState(
@@ -153,7 +155,45 @@ void main() {
           updateBlocks: false,
           location: Routes.home,
         ),
-        Routes.login,
+        isNull,
+      );
+      // …and the unmatched case lands on the search screen rather than the
+      // sign-in screen. `/splash` is the one that matters: it is where every
+      // launch starts, so sending it to `login` would put the phone-number ask
+      // back in front of every existing install.
+      expect(
+        redirect(
+          session: const SessionState(
+            status: SessionStatus.signedOut,
+            onboardingSeen: true,
+          ),
+          updateBlocks: false,
+          location: Routes.splash,
+        ),
+        Routes.home,
+      );
+      expect(
+        redirect(
+          session: const SessionState(
+            status: SessionStatus.signedOut,
+            onboardingSeen: true,
+          ),
+          updateBlocks: false,
+          location: Routes.bookings,
+        ),
+        Routes.home,
+      );
+      // Sign-in is still somewhere a signed-out visitor may go.
+      expect(
+        redirect(
+          session: const SessionState(
+            status: SessionStatus.signedOut,
+            onboardingSeen: true,
+          ),
+          updateBlocks: false,
+          location: Routes.login,
+        ),
+        isNull,
       );
       expect(
         redirect(

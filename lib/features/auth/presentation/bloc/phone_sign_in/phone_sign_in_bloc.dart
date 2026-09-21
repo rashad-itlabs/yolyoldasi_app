@@ -29,6 +29,7 @@ class PhoneSignInBloc extends Bloc<PhoneSignInEvent, PhoneSignInState> {
     on<PhoneSignInModeChanged>(_onModeChanged);
     on<PhoneSignInCodeRequested>(_onCodeRequested);
     on<PhoneSignInCodeChanged>(_onCodeChanged);
+    on<PhoneSignInReferralChanged>(_onReferralChanged);
     on<PhoneSignInSubmitted>(_onSubmitted);
     on<PhoneSignInPhoneEditRequested>(_onPhoneEditRequested);
     on<PhoneSignInTicked>(_onTicked);
@@ -59,6 +60,13 @@ class PhoneSignInBloc extends Bloc<PhoneSignInEvent, PhoneSignInState> {
   }
 
   /// Step 1, and the resend button — they are the same call.
+  void _onReferralChanged(
+    PhoneSignInReferralChanged event,
+    Emitter<PhoneSignInState> emit,
+  ) {
+    emit(state.copyWith(referralCode: event.code));
+  }
+
   Future<void> _onCodeRequested(
     PhoneSignInCodeRequested event,
     Emitter<PhoneSignInState> emit,
@@ -117,6 +125,7 @@ class PhoneSignInBloc extends Bloc<PhoneSignInEvent, PhoneSignInState> {
       // that verify has to be given back the phone from the request response.
       phone: state.challenge!.phone,
       code: state.code,
+      referralCode: state.referralCode,
     );
     switch (result) {
       case Ok(:final value):

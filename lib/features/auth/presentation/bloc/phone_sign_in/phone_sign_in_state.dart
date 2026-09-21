@@ -20,6 +20,7 @@ class PhoneSignInState extends Equatable {
     this.session,
     this.failure,
     this.resendIn = 0,
+    this.referralCode = '',
   });
 
   final PhoneSignInStep step;
@@ -48,6 +49,10 @@ class PhoneSignInState extends Equatable {
   /// Seconds left before another code may be requested; 0 when it may be now.
   final int resendIn;
 
+  /// An invite code, if the user was given one. Optional everywhere: it only
+  /// does anything on a brand-new account (API.md §21).
+  final String referralCode;
+
   bool get canRequestCode =>
       PhoneNumbers.isValid(phone) && !status.isBusy && resendIn == 0;
 
@@ -67,6 +72,7 @@ class PhoneSignInState extends Equatable {
     AuthSession? Function()? session,
     Failure? Function()? failure,
     int? resendIn,
+    String? referralCode,
   }) {
     return PhoneSignInState(
       step: step ?? this.step,
@@ -78,6 +84,7 @@ class PhoneSignInState extends Equatable {
       session: session != null ? session() : this.session,
       failure: failure != null ? failure() : this.failure,
       resendIn: resendIn ?? this.resendIn,
+      referralCode: referralCode ?? this.referralCode,
     );
   }
 
@@ -92,5 +99,6 @@ class PhoneSignInState extends Equatable {
     session,
     failure,
     resendIn,
+    referralCode,
   ];
 }

@@ -34,6 +34,8 @@ extension FailureMessage on Failure {
     FailureCode.selfBooking => 'errSelfBooking',
     FailureCode.documentsPending => 'errDocumentsPending',
     FailureCode.documentsRejected => 'errDocumentsRejected',
+    FailureCode.driverProfileRequired => 'errDriverProfileRequired',
+    FailureCode.womenOnlyRide => 'errWomenOnlyRide',
     FailureCode.storage => 'errStorage',
     FailureCode.cancelled => 'errCancelled',
     FailureCode.unknown => 'errUnknown',

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/types.dart';
+import '../../../profile/domain/entities/user_enums.dart';
 import 'ride.dart';
 
 /// `sort` on `GET /rides` (API.md §9).
@@ -53,6 +54,10 @@ class RideSearchQuery extends Equatable {
     this.sort = RideSortOption.earliest,
     this.maxPrice,
     this.bands = const <TimeOfDayBand>{},
+    this.driverGender,
+    this.womenOnly = false,
+    this.instantOnly = false,
+    this.verifiedOnly = false,
   });
 
   /// Both are optional on the wire: with neither, `GET /rides` answers with
@@ -69,6 +74,23 @@ class RideSearchQuery extends Equatable {
   final int seats;
 
   final RideSortOption sort;
+
+  // ---- server-side filters -----------------------------------------------
+  /// Only rides driven by someone of this gender.
+  ///
+  /// The reason this exists is narrow and specific: for a woman travelling
+  /// alone between cities, the deciding question is who is behind the wheel.
+  /// Without the filter that whole group stays outside the app.
+  final Gender? driverGender;
+
+  /// Only rides the driver marked women-only.
+  final bool womenOnly;
+
+  /// Only rides that confirm on the spot — no waiting on an answer.
+  final bool instantOnly;
+
+  /// Only drivers whose documents are approved.
+  final bool verifiedOnly;
 
   // ---- client-side refinements -------------------------------------------
   final double? maxPrice;
@@ -88,7 +110,11 @@ class RideSearchQuery extends Equatable {
   int get activeFilterCount =>
       (maxPrice != null ? 1 : 0) +
       bands.length +
-      (sort != RideSortOption.earliest ? 1 : 0);
+      (sort != RideSortOption.earliest ? 1 : 0) +
+      (driverGender != null ? 1 : 0) +
+      (womenOnly ? 1 : 0) +
+      (instantOnly ? 1 : 0) +
+      (verifiedOnly ? 1 : 0);
 
   bool get hasRefinements => maxPrice != null || bands.isNotEmpty;
 
@@ -101,6 +127,12 @@ class RideSearchQuery extends Equatable {
     'date': ?_formatDate(date),
     'seats': seats,
     'sort': sort.apiValue,
+    'driver_gender': ?driverGender?.apiValue,
+    // Only sent when on: `women_only=0` would read as an explicit "show me
+    // rides that are not women-only", which is not what an unchecked box means.
+    if (womenOnly) 'women_only': 1,
+    if (instantOnly) 'instant_only': 1,
+    if (verifiedOnly) 'verified_only': 1,
   };
 
   /// `YYYY-MM-DD` — the one field that is not ISO 8601 (API.md §1).
@@ -135,6 +167,10 @@ class RideSearchQuery extends Equatable {
     RideSortOption? sort,
     double? Function()? maxPrice,
     Set<TimeOfDayBand>? bands,
+    Gender? Function()? driverGender,
+    bool? womenOnly,
+    bool? instantOnly,
+    bool? verifiedOnly,
   }) {
     return RideSearchQuery(
       fromCityId: fromCityId != null ? fromCityId() : this.fromCityId,
@@ -144,6 +180,10 @@ class RideSearchQuery extends Equatable {
       sort: sort ?? this.sort,
       maxPrice: maxPrice != null ? maxPrice() : this.maxPrice,
       bands: bands ?? this.bands,
+      driverGender: driverGender != null ? driverGender() : this.driverGender,
+      womenOnly: womenOnly ?? this.womenOnly,
+      instantOnly: instantOnly ?? this.instantOnly,
+      verifiedOnly: verifiedOnly ?? this.verifiedOnly,
     );
   }
 
@@ -160,12 +200,20 @@ class RideSearchQuery extends Equatable {
 
   /// Whether a change needs a new request, or only re-running [refine] over
   /// what is already loaded.
+  ///
+  /// The server-side filters all belong here: unlike price and time band, they
+  /// cannot be applied to a page already in hand — a ride the query excluded
+  /// was never downloaded in the first place.
   bool needsRefetchFrom(RideSearchQuery previous) =>
       fromCityId != previous.fromCityId ||
       toCityId != previous.toCityId ||
       date != previous.date ||
       seats != previous.seats ||
-      sort != previous.sort;
+      sort != previous.sort ||
+      driverGender != previous.driverGender ||
+      womenOnly != previous.womenOnly ||
+      instantOnly != previous.instantOnly ||
+      verifiedOnly != previous.verifiedOnly;
 
   @override
   List<Object?> get props => [
@@ -176,5 +224,9 @@ class RideSearchQuery extends Equatable {
     sort,
     maxPrice,
     bands,
+    driverGender,
+    womenOnly,
+    instantOnly,
+    verifiedOnly,
   ];
 }

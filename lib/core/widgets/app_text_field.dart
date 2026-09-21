@@ -17,24 +17,29 @@ class FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+
+    // Both children are flexible, and neither may be dropped.
+    //
+    // A plain `Row` overflowed wherever a field is narrower than its own label
+    // — two fields side by side on the vehicle form, and anything at all at a
+    // large accessibility text scale. The label is the only thing telling the
+    // user what the box is for, so it shrinks and ellipsises rather than
+    // spilling off the edge.
+    //
+    // `Flexible` rather than `Expanded`: a short label should still sit next to
+    // its "· optional" marker instead of being pushed apart by empty space.
     return Row(
       children: [
-        Text(
-          text,
-          style: context.text.labelMedium?.copyWith(
-            color: palette.textSecondary,
-          ),
-        ),
-        if (!isRequired) ...[
-          HGap.xs,
-          Text(
-            '· ${context.l10n.optional}',
-            style: context.text.labelSmall?.copyWith(
-              color: palette.textTertiary,
-              fontWeight: FontWeight.w400,
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.labelMedium?.copyWith(
+              color: palette.textSecondary,
             ),
           ),
-        ],
+        ),
       ],
     );
   }

@@ -16,6 +16,7 @@ class AuthSession extends Equatable {
     this.phone = '',
     this.activeMode = UserMode.passenger,
     this.hasDriverProfile = false,
+    this.isNewUser = false,
   });
 
   /// The Sanctum token. Non-expiring for `device: "app"`.
@@ -27,6 +28,11 @@ class AuthSession extends Equatable {
   final UserMode activeMode;
   final bool hasDriverProfile;
 
+  /// Whether this verify created the account rather than opening an existing
+  /// one (API.md §3). The difference between a sign-in and an acquisition, and
+  /// the funnel cannot be read without it.
+  final bool isNewUser;
+
   @override
   List<Object?> get props => [
     token,
@@ -35,5 +41,6 @@ class AuthSession extends Equatable {
     phone,
     activeMode,
     hasDriverProfile,
+    isNewUser,
   ];
 }

@@ -4,7 +4,6 @@ import '../../../cities/data/models/city_model.dart';
 import '../../../profile/data/models/user_model.dart';
 import '../../../profile/data/models/vehicle_model.dart';
 import '../../../profile/domain/entities/app_user.dart';
-import '../../domain/entities/recent_search.dart';
 import '../../domain/entities/ride.dart';
 import '../../domain/entities/ride_draft.dart';
 
@@ -35,6 +34,9 @@ abstract final class RideModel {
       pickupPoint: json.str('pickup_point'),
       dropoffPoint: json.str('dropoff_point'),
       instantBooking: json.flag('instant_booking'),
+      womenOnly: json.flag('women_only'),
+      isBoosted: json.flag('is_boosted'),
+      shareUrl: json.strOrNull('share_url'),
       isMine: json.flag('is_mine'),
     );
   }
@@ -52,6 +54,16 @@ abstract final class RideModel {
     'pickup_point': draft.pickupPoint.trim(),
     'dropoff_point': draft.dropoffPoint.trim(),
     'instant_booking': draft.instantBooking,
+    'women_only': draft.womenOnly,
+    // Sent only when it means something. `1` is the default on both sides, and
+    // an extra key on every publish would suggest the form always fans out.
+    if (draft.repeatWeeks > 1) 'repeat_weeks': draft.repeatWeeks,
+  };
+
+  /// Body for `POST /rides/{id}/repeat` — the same run, a new date.
+  static Json repeatBody({required DateTime departureAt, int weeks = 1}) => {
+    'departure_at': departureAt.toIso8601String(),
+    if (weeks > 1) 'repeat_weeks': weeks,
   };
 
   /// Body for `PUT /rides/{id}`.
@@ -66,32 +78,7 @@ abstract final class RideModel {
     'pickup_point': draft.pickupPoint.trim(),
     'dropoff_point': draft.dropoffPoint.trim(),
     'instant_booking': draft.instantBooking,
+    'women_only': draft.womenOnly,
     'status': ?status?.apiValue,
   };
-}
-
-/// `GET /me/recent-searches` (API.md §14).
-abstract final class RecentSearchModel {
-  static RecentSearch fromJson(Json json) {
-    return RecentSearch(
-      fromCity: CityModel.fromJson(json.child('from_city')),
-      toCity: CityModel.fromJson(json.child('to_city')),
-      searchedDate: _parseDate(json.strOrNull('searched_date')),
-      seats: json.integer('seats', 1),
-      searchedAt: json.date('searched_at'),
-    );
-  }
-
-  /// `searched_date` is `YYYY-MM-DD`, not ISO 8601 — parsing it as a local date
-  /// keeps "tomorrow" from drifting a day under a negative UTC offset.
-  static DateTime? _parseDate(String? value) {
-    if (value == null) return null;
-    final parts = value.split('-');
-    if (parts.length != 3) return DateTime.tryParse(value);
-    final year = int.tryParse(parts[0]);
-    final month = int.tryParse(parts[1]);
-    final day = int.tryParse(parts[2]);
-    if (year == null || month == null || day == null) return null;
-    return DateTime(year, month, day);
-  }
 }

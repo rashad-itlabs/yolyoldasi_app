@@ -1,7 +1,6 @@
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
 import '../../../../core/network/api_envelope.dart';
-import '../../domain/entities/recent_search.dart';
 import '../../domain/entities/ride.dart';
 import '../../domain/entities/ride_draft.dart';
 import '../../domain/entities/ride_query.dart';
@@ -43,6 +42,10 @@ class RideRepositoryImpl implements RideRepository {
       _api.update(rideId, draft);
 
   @override
+  FutureResult<Ride> repeat(int rideId, DateTime departureAt, {int weeks = 1}) =>
+      _api.repeat(rideId, departureAt, weeks: weeks);
+
+  @override
   FutureResult<Ride> setStatus(int rideId, RideStatus status) =>
       _api.setStatus(rideId, status);
 
@@ -52,9 +55,4 @@ class RideRepositoryImpl implements RideRepository {
   @override
   FutureResult<void> complete(int rideId) => _api.complete(rideId);
 
-  @override
-  FutureResult<List<RecentSearch>> recentSearches() => _api.recentSearches();
-
-  @override
-  FutureResult<void> clearRecentSearches() => _api.clearRecentSearches();
 }

@@ -58,6 +58,11 @@ class RideSearchFiltersChanged extends RideSearchEvent {
     this.maxPrice,
     this.clearMaxPrice = false,
     this.bands,
+    this.driverGender,
+    this.clearDriverGender = false,
+    this.womenOnly,
+    this.instantOnly,
+    this.verifiedOnly,
   });
 
   final RideSortOption? sort;
@@ -65,8 +70,27 @@ class RideSearchFiltersChanged extends RideSearchEvent {
   final bool clearMaxPrice;
   final Set<TimeOfDayBand>? bands;
 
+  /// Unlike the price ceiling and the time bands, these four are `GET /rides`
+  /// parameters — changing any of them re-runs the search rather than filtering
+  /// what is already on screen.
+  final Gender? driverGender;
+  final bool clearDriverGender;
+  final bool? womenOnly;
+  final bool? instantOnly;
+  final bool? verifiedOnly;
+
   @override
-  List<Object?> get props => [sort, maxPrice, clearMaxPrice, bands];
+  List<Object?> get props => [
+    sort,
+    maxPrice,
+    clearMaxPrice,
+    bands,
+    driverGender,
+    clearDriverGender,
+    womenOnly,
+    instantOnly,
+    verifiedOnly,
+  ];
 }
 
 class RideSearchFiltersCleared extends RideSearchEvent {

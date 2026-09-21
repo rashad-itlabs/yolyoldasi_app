@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/app_update/data/repositories/app_update_repository_impl.dart';
@@ -32,13 +34,20 @@ import '../../features/reports/domain/repositories/report_repository.dart';
 import '../../features/reviews/data/repositories/review_repository_impl.dart';
 import '../../features/reviews/data/services/review_api_service.dart';
 import '../../features/reviews/domain/repositories/review_repository.dart';
+import '../../features/ride_requests/data/repositories/ride_request_repository_impl.dart';
+import '../../features/ride_requests/data/services/ride_request_api_service.dart';
+import '../../features/ride_requests/domain/repositories/ride_request_repository.dart';
+import '../../features/rides/data/repositories/demand_repository_impl.dart';
 import '../../features/rides/data/repositories/ride_repository_impl.dart';
+import '../../features/rides/data/services/demand_api_service.dart';
 import '../../features/rides/data/services/ride_api_service.dart';
+import '../../features/rides/domain/repositories/demand_repository.dart';
 import '../../features/rides/domain/repositories/ride_repository.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
 import '../config/app_config.dart';
 import '../network/api_client.dart';
+import '../services/analytics.dart';
 import '../services/app_version_info.dart';
 import '../services/push/foreground_message_watcher.dart';
 import '../services/push/local_notifications.dart';
@@ -65,11 +74,14 @@ class AppDependencies {
     required this.drivers,
     required this.cities,
     required this.rides,
+    required this.rideRequests,
+    required this.demand,
     required this.bookings,
     required this.chat,
     required this.reviews,
     required this.notifications,
     required this.reports,
+    required this.analytics,
     required this.push,
     required this.localNotifications,
     required this.pendingDeepLink,
@@ -105,10 +117,23 @@ class AppDependencies {
   /// Whether this build is still allowed to run. Read before sign-in.
   final AppUpdateRepository updates;
 
+  /// Product telemetry. Lives beside the repositories rather than inside one
+  /// because almost every screen has something to report, and none of them
+  /// should have to wait for it.
+  final Analytics analytics;
+
   final UserRepository users;
   final DriverRepository drivers;
   final CityRepository cities;
   final RideRepository rides;
+
+  /// Passenger demand — the half of the marketplace only the passenger can
+  /// fill (API.md §19).
+  final RideRequestRepository rideRequests;
+
+  /// What people are searching for and what a route costs (API.md §20).
+  final DemandRepository demand;
+
   final BookingRepository bookings;
   final ChatRepository chat;
   final ReviewRepository reviews;
@@ -170,11 +195,20 @@ class AppDependencies {
       ),
       cities: CityRepositoryImpl(CityApiService(client)),
       rides: RideRepositoryImpl(RideApiService(client)),
+      rideRequests: RideRequestRepositoryImpl(RideRequestApiService(client)),
+      demand: DemandRepositoryImpl(DemandApiService(client)),
       bookings: BookingRepositoryImpl(BookingApiService(client)),
       chat: chat,
       reviews: ReviewRepositoryImpl(ReviewApiService(client)),
       notifications: NotificationRepositoryImpl(NotificationApiService(client)),
       reports: ReportRepositoryImpl(ReportApiService(client)),
+
+      analytics: Analytics(
+        client: client,
+        preferences: preferences,
+        version: appVersion,
+        platform: _platformName(),
+      ),
 
       // OneSignal, unless a test passed its own or the app id was compiled
       // out — in which case the inactive transport takes over and the
@@ -193,6 +227,14 @@ class AppDependencies {
     );
   }
 
+  /// What the API calls this platform, or null where it has no name for it —
+  /// a desktop test run, for instance. The field is optional on the wire.
+  static String? _platformName() {
+    if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
+    return null;
+  }
+
   /// OneSignal when there is an app id to point it at, nothing otherwise.
   ///
   /// The empty case is real rather than defensive: `--dart-define=
@@ -205,6 +247,8 @@ class AppDependencies {
       : OneSignalPushService();
 
   Future<void> dispose() async {
+    // First, so the last events still go out over a live client.
+    await analytics.dispose();
     await foregroundMessages.dispose();
     await push.dispose();
     await apiClient.close();

@@ -1,6 +1,7 @@
 import '../../../../core/error/result.dart';
 import '../../../../core/network/upload_file.dart';
 import '../entities/app_user.dart';
+import '../entities/referral.dart';
 import '../entities/user_enums.dart';
 
 /// The signed-in account and other people's public profiles.
@@ -29,6 +30,9 @@ abstract interface class UserRepository {
 
   /// `GET /users/{id}`.
   FutureResult<PublicUser> publicProfile(int userId);
+
+  /// `GET /me/referral` — the invite code and what it has earned so far.
+  FutureResult<ReferralSummary> referral();
 
   FutureResult<NotificationPreferences> notificationPreferences();
 

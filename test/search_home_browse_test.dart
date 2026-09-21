@@ -13,12 +13,13 @@ import 'package:yolyoldasi/features/bookings/domain/repositories/booking_reposit
 import 'package:yolyoldasi/features/cities/domain/entities/city.dart';
 import 'package:yolyoldasi/features/cities/domain/repositories/city_repository.dart';
 import 'package:yolyoldasi/features/cities/presentation/bloc/cities_bloc.dart';
+import 'package:yolyoldasi/features/profile/domain/entities/app_user.dart';
+import 'package:yolyoldasi/features/ride_requests/domain/entities/ride_request.dart';
+import 'package:yolyoldasi/features/ride_requests/domain/repositories/ride_request_repository.dart';
 import 'package:yolyoldasi/features/rides/data/models/ride_model.dart';
-import 'package:yolyoldasi/features/rides/domain/entities/recent_search.dart';
 import 'package:yolyoldasi/features/rides/domain/entities/ride.dart';
 import 'package:yolyoldasi/features/rides/domain/entities/ride_query.dart';
 import 'package:yolyoldasi/features/rides/domain/repositories/ride_repository.dart';
-import 'package:yolyoldasi/features/rides/presentation/bloc/recent_searches/recent_searches_bloc.dart';
 import 'package:yolyoldasi/features/rides/presentation/bloc/ride_search/ride_search_bloc.dart';
 import 'package:yolyoldasi/features/rides/presentation/pages/search_home_page.dart';
 import 'package:yolyoldasi/features/rides/presentation/widgets/ride_card.dart';
@@ -49,14 +50,21 @@ void main() {
     'created_at': DateTime.now().toIso8601String(),
   });
 
-  Widget wrap(List<Ride> rides) {
+  /// [user] decides whether the screen is built for a guest or for an account.
+  ///
+  /// The default is a guest, because browsing without one is the normal entry
+  /// path now (API.md §18).
+  Widget wrap(List<Ride> rides, {AppUser? user}) {
     final repository = _FakeRideRepository(rides);
 
     final session = _MockSessionBloc();
     whenListen(
       session,
       const Stream<SessionState>.empty(),
-      initialState: const SessionState(),
+      initialState: SessionState(
+        status: user == null ? SessionStatus.signedOut : SessionStatus.ready,
+        user: user,
+      ),
     );
 
     final badges = _MockBadgesBloc();
@@ -73,6 +81,11 @@ void main() {
         RepositoryProvider<BookingRepository>.value(
           value: _FakeBookingRepository(),
         ),
+        // Only the signed-in branch reaches for it — the "what I'm waiting
+        // for" card — but the provider has to be above the tree either way.
+        RepositoryProvider<RideRequestRepository>.value(
+          value: _FakeRideRequestRepository(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -80,9 +93,6 @@ void main() {
           BlocProvider<BadgesBloc>.value(value: badges),
           BlocProvider<CitiesBloc>(
             create: (_) => CitiesBloc(cities: _FakeCityRepository()),
-          ),
-          BlocProvider<RecentSearchesBloc>(
-            create: (_) => RecentSearchesBloc(rides: repository),
           ),
           BlocProvider<RideSearchBloc>(
             create: (_) => RideSearchBloc(rides: repository),
@@ -168,6 +178,40 @@ void main() {
     expect(find.byType(RideCard), findsNothing);
   });
 
+  testWidgets('offers a guest no notification bell', (tester) async {
+    await tester.pumpWidget(wrap(const []));
+    await tester.pumpAndSettle();
+
+    // `/notifications` needs an account, so the router would bounce a guest
+    // straight back here — a button that visibly does nothing is worse than no
+    // button. Same for the avatar, which has no profile to open.
+    expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
+  });
+
+  testWidgets('gives a signed-in user the bell back', (tester) async {
+    await tester.pumpWidget(
+      wrap(const [], user: const AppUser(id: 7, phone: '+994501234567')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+  });
+
+  testWidgets('invites a passenger with no requests to post one', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(const [], user: const AppUser(id: 7, phone: '+994501234567')),
+    );
+    await tester.pumpAndSettle();
+
+    // The entry point to a *first* request has to exist before there is one.
+    // Hidden-when-empty meant the only other way in was an empty search
+    // result, which is a screen you reach only on a dead route — so anyone
+    // searching a busy corridor never learned the feature was there.
+    expect(find.text('Axtardığını tapmırsan?'), findsOneWidget);
+  });
+
   testWidgets('holds the status bar open so the list cannot scroll under it', (
     tester,
   ) async {
@@ -234,6 +278,19 @@ void main() {
   });
 }
 
+/// Answers `mine` with nothing: the home screen only asks so it can hide the
+/// card when there is nothing waiting.
+class _FakeRideRequestRepository implements RideRequestRepository {
+  @override
+  FutureResult<Paginated<RideRequest>> mine({
+    RideRequestStatus? status,
+    int? page,
+  }) async => Ok(const Paginated<RideRequest>.empty());
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _MockSessionBloc extends MockBloc<SessionEvent, SessionState>
     implements SessionBloc {}
 
@@ -254,8 +311,6 @@ class _FakeRideRepository implements RideRepository {
     int? page,
   }) async => Ok(Paginated(items: _rides, meta: PageMeta.single));
 
-  @override
-  FutureResult<List<RecentSearch>> recentSearches() async => const Ok([]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

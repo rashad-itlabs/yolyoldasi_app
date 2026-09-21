@@ -2,7 +2,6 @@ import '../../../../core/error/result.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_envelope.dart';
-import '../../domain/entities/recent_search.dart';
 import '../../domain/entities/ride.dart';
 import '../../domain/entities/ride_draft.dart';
 import '../../domain/entities/ride_query.dart';
@@ -55,6 +54,17 @@ class RideApiService {
     parse: RideModel.fromJson,
   );
 
+  /// `POST /rides/{id}/repeat` — copies the listing onto a new date.
+  ///
+  /// The vehicle travels with the copy, so a car deleted since the original
+  /// was published makes the server answer 422 rather than orphan the row.
+  FutureResult<Ride> repeat(int rideId, DateTime departureAt, {int weeks = 1}) =>
+      _client.post(
+        Api.rideRepeat(rideId),
+        body: RideModel.repeatBody(departureAt: departureAt, weeks: weeks),
+        parse: RideModel.fromJson,
+      );
+
   /// Flips between `active` and `inactive` without touching anything else.
   FutureResult<Ride> setStatus(int rideId, RideStatus status) => _client.put(
     Api.ride(rideId),
@@ -71,9 +81,4 @@ class RideApiService {
   FutureResult<void> complete(int rideId) =>
       _client.send('POST', Api.rideComplete(rideId));
 
-  FutureResult<List<RecentSearch>> recentSearches() =>
-      _client.getList(Api.meRecentSearches, parse: RecentSearchModel.fromJson);
-
-  FutureResult<void> clearRecentSearches() =>
-      _client.send('DELETE', Api.meRecentSearches);
 }
