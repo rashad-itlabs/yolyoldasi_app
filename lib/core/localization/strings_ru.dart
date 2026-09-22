@@ -650,4 +650,7 @@ const Map<String, String> kStringsRu = {
   'askDriversTitle': 'Не нашли поездку?',
   'askDriversBody':
       'Укажите маршрут — мы покажем его водителям на этом направлении.',
+  'countryCodeTitle': 'Код страны',
+  'countrySearchHint': 'Поиск страны или кода',
+  'countryNotFound': 'Страна не найдена',
 };

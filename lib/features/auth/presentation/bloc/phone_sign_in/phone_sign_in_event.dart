@@ -16,6 +16,20 @@ class PhoneSignInPhoneChanged extends PhoneSignInEvent {
   List<Object?> get props => [phone];
 }
 
+/// The country the number belongs to, picked from the flag beside the field.
+///
+/// Clears whatever was typed: `50 123 45 67` means a different number under a
+/// different dial code, and silently reinterpreting it would send the code to
+/// a stranger.
+class PhoneSignInCountryChanged extends PhoneSignInEvent {
+  const PhoneSignInCountryChanged(this.country);
+
+  final Country country;
+
+  @override
+  List<Object?> get props => [country];
+}
+
 /// An invite code, typed by someone a friend sent here.
 ///
 /// Optional, and never blocks anything: a wrong code simply credits nobody.

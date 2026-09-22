@@ -113,11 +113,19 @@ və token 1 saata bitir.
 
 | Sahə | Tip | Qayda |
 |---|---|---|
-| `phone` | string | **məcburi** — istifadəçinin yazdığı kimi göndər |
+| `phone` | string | **məcburi** — tam E.164, `+` ilə |
 
-Nömrəni normallaşdırmağa çalışma: server `0505550001`, `050 555 00 01`, `994…`
-və `+994…` formalarının hamısını `+994505550001`-ə gətirir. Cavabdakı `phone`-u
-saxla — 2-ci addımda **məhz o** göndərilməlidir.
+**Ölkə məhdudiyyəti yoxdur.** Nömrə `+` ilə başlayırsa, server onu olduğu kimi
+qəbul edir — `+905551234567`, `+995555123456`, `+994505550001` hamısı işləyir.
+Tətbiqdə ölkə seçimi var (defolt Azərbaycan) və o, tam nömrəni göndərir.
+
+`+`-sız gələn nömrə Azərbaycan sayılır: `0505550001`, `050 555 00 01`, `994…`
+hamısı `+994505550001` olur. Bu, ölkə seçimi olmayan köhnə tətbiq versiyaları
+üçün saxlanılıb — **yeni klient həmişə `+` göndərməlidir**, əks halda doqquz
+rəqəmli gürcü nömrəsi `+994…`, trunk sıfırı ilə yazılmış türk nömrəsi isə
+`+0555…` olur.
+
+Cavabdakı `phone`-u saxla — 2-ci addımda **məhz o** göndərilməlidir.
 
 ```json
 {

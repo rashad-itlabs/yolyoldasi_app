@@ -649,4 +649,7 @@ const Map<String, String> kStringsEn = {
   'askDriversTitle': 'Not finding the ride you want?',
   'askDriversBody':
       'Describe the route and we will show it to drivers who run it.',
+  'countryCodeTitle': 'Country code',
+  'countrySearchHint': 'Search country or code',
+  'countryNotFound': 'No such country',
 };

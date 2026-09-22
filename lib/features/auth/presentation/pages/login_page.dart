@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/dial_codes.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/services/analytics.dart';
@@ -22,6 +23,7 @@ import '../../../../core/widgets/otp_input.dart';
 import '../../../profile/domain/entities/user_enums.dart';
 import '../bloc/phone_sign_in/phone_sign_in_bloc.dart';
 import '../bloc/session/session_bloc.dart';
+import '../widgets/country_picker_sheet.dart';
 
 /// Phone sign-in — API.md §3.
 ///
@@ -44,6 +46,18 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _phoneController.dispose();
     super.dispose();
+  }
+
+  /// Opens the dial-code picker and tells the bloc what came back.
+  Future<void> _pickCountry(BuildContext context, Country current) async {
+    final bloc = context.read<PhoneSignInBloc>();
+    final picked = await CountryPickerSheet.show(context, selected: current);
+    if (picked == null) return;
+
+    // Clears the field as well as the state: the controller holds its own text
+    // and would otherwise keep the old digits under the new flag.
+    _phoneController.clear();
+    bloc.add(PhoneSignInCountryChanged(picked));
   }
 
   void _requestCode() {
@@ -187,7 +201,25 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ],
 
+      // The dial code used to be a fixed `+994` printed under the box, which
+      // meant a driver on a Turkish SIM could not sign in at all. It is now a
+      // picker — still Azerbaijan on open, because that is where almost every
+      // account comes from.
+      // Above the number rather than beside it. Side by side reads tighter,
+      // but the flag, the dial code and a country name cannot share a line
+      // with a phone field at a large text scale without one of them being
+      // cut — and the people most likely to need this picker are the ones
+      // least able to guess what got cut.
       VGap.xl,
+      AppPickerField(
+        label: l10n.countryCodeTitle,
+        value: '${state.country.flag}  ${state.country.name}  '
+            '${state.country.prefix}',
+        icon: Icons.public_rounded,
+        onTap: () => _pickCountry(context, state.country),
+      ),
+
+      VGap.lg,
       AppTextField(
         controller: _phoneController,
         label: l10n.phoneNumber,
@@ -196,11 +228,10 @@ class _LoginPageState extends State<LoginPage> {
         keyboardType: TextInputType.phone,
         textInputAction: TextInputAction.done,
         autofillHints: const [AutofillHints.telephoneNumber],
-        inputFormatters: const [_PhoneFormatter()],
-        prefixIcon: Icons.phone_outlined,
-        // The country code is fixed and never typed, so it is stated rather
-        // than asked for.
-        helper: PhoneNumbers.countryCode,
+        // Rebuilt per country: the grouping and the digit cap both depend on
+        // it, so a `const` formatter would keep Azerbaijani spacing on a
+        // foreign number.
+        inputFormatters: [_PhoneFormatter(state.country)],
         errorText: state.failure?.message(l10n),
         onChanged: (value) =>
             context.read<PhoneSignInBloc>().add(PhoneSignInPhoneChanged(value)),
@@ -339,14 +370,19 @@ class _LoginPageState extends State<LoginPage> {
 /// middle would otherwise land in the wrong place once the spacing shifts, and
 /// a nine-digit field is retyped rather than edited in practice.
 class _PhoneFormatter extends TextInputFormatter {
-  const _PhoneFormatter();
+  const _PhoneFormatter(this.country);
+
+  final Country country;
 
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final formatted = PhoneNumbers.formatAsTyped(newValue.text);
+    final formatted = PhoneNumbers.formatAsTyped(
+      newValue.text,
+      country: country,
+    );
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),

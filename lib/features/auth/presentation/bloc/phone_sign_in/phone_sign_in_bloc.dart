@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../../core/bloc/data_status.dart';
 import '../../../../../core/constants/app_constants.dart';
+import '../../../../../core/constants/dial_codes.dart';
 import '../../../../../core/error/failure.dart';
 import '../../../../../core/error/result.dart';
 import '../../../../../core/utils/phone_number.dart';
@@ -29,6 +30,7 @@ class PhoneSignInBloc extends Bloc<PhoneSignInEvent, PhoneSignInState> {
     on<PhoneSignInModeChanged>(_onModeChanged);
     on<PhoneSignInCodeRequested>(_onCodeRequested);
     on<PhoneSignInCodeChanged>(_onCodeChanged);
+    on<PhoneSignInCountryChanged>(_onCountryChanged);
     on<PhoneSignInReferralChanged>(_onReferralChanged);
     on<PhoneSignInSubmitted>(_onSubmitted);
     on<PhoneSignInPhoneEditRequested>(_onPhoneEditRequested);
@@ -60,6 +62,18 @@ class PhoneSignInBloc extends Bloc<PhoneSignInEvent, PhoneSignInState> {
   }
 
   /// Step 1, and the resend button — they are the same call.
+  void _onCountryChanged(
+    PhoneSignInCountryChanged event,
+    Emitter<PhoneSignInState> emit,
+  ) {
+    if (state.country == event.country) return;
+
+    // The number goes with the flag. The digits already typed were a number in
+    // the old country, not this one, and carrying them over would look like
+    // the app had understood something it had not.
+    emit(state.copyWith(country: event.country, phone: '', failure: () => null));
+  }
+
   void _onReferralChanged(
     PhoneSignInReferralChanged event,
     Emitter<PhoneSignInState> emit,
@@ -75,7 +89,16 @@ class PhoneSignInBloc extends Bloc<PhoneSignInEvent, PhoneSignInState> {
 
     emit(state.copyWith(status: ActionStatus.inProgress, failure: () => null));
 
-    final result = await _auth.requestCode(state.phone);
+    // Full E.164, not the digits as typed.
+    //
+    // The server falls back to Azerbaijani heuristics for a bare number — a
+    // nine-digit Georgian number would come back as `+994…`, and a Turkish one
+    // written with its trunk zero as `+0555…`. Sending the dial code the user
+    // actually picked removes the guesswork entirely.
+    final e164 =
+        PhoneNumbers.toE164(state.phone, country: state.country) ?? state.phone;
+
+    final result = await _auth.requestCode(e164);
     switch (result) {
       case Ok(:final value):
         emit(

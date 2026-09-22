@@ -199,7 +199,10 @@
       "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && cat app/Http/Resources/UserResource.php && echo \"=== CITY ===\" && cat app/Http/Resources/CityResource.php)",
       "Read(//Users/rashadaliyev/Documents/developer/yolyoldasi/app/Http/Resources/**)",
       "Bash(cat > *)",
-      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && echo \"=== QONAQ AXTARIŞI recent_searches-i sındırmır? ===\" && grep -n \"Hesabsız axtarış\" -A 4 app/Http/Controllers/Api/RideController.php && echo && echo \"=== RideResource qonaq üçün ===\" && sed -n '9,12p' app/Http/Resources/RideResource.php)"
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && echo \"=== QONAQ AXTARIŞI recent_searches-i sındırmır? ===\" && grep -n \"Hesabsız axtarış\" -A 4 app/Http/Controllers/Api/RideController.php && echo && echo \"=== RideResource qonaq üçün ===\" && sed -n '9,12p' app/Http/Resources/RideResource.php)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"994501234567\\\\|Telefon nömrəsi düzgün\" -B 2 -A 3 app/Http/Controllers/Api/AuthController.php | head -14)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"istifadəçinin yazdığı kimi\\\\|Nömrəni normallaşdırmağa\" -B 4 -A 6 docs/API.md | head -20)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"auth/phone/request\" -A 18 docs/API.md | head -26)"
     ],
     "additionalDirectories": [
       "/Users/rashadaliyev/Documents/developer/yolyoldasi/config",

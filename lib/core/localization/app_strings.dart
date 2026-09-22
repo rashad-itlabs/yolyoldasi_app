@@ -772,6 +772,9 @@ class AppStrings {
   String get browseAsGuest => _get('browseAsGuest');
   String get signIn => _get('signIn');
   String get skipSignIn => _get('skipSignIn');
+  String get countryCodeTitle => _get('countryCodeTitle');
+  String get countrySearchHint => _get('countrySearchHint');
+  String get countryNotFound => _get('countryNotFound');
   String get askDriversTitle => _get('askDriversTitle');
   String get askDriversBody => _get('askDriversBody');
 

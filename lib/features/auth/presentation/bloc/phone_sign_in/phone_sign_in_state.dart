@@ -21,6 +21,7 @@ class PhoneSignInState extends Equatable {
     this.failure,
     this.resendIn = 0,
     this.referralCode = '',
+    this.country = Countries.azerbaijan,
   });
 
   final PhoneSignInStep step;
@@ -53,8 +54,17 @@ class PhoneSignInState extends Equatable {
   /// does anything on a brand-new account (API.md §21).
   final String referralCode;
 
+  /// Which country [phone] is being typed for.
+  ///
+  /// Azerbaijan by default, because that is where almost every account comes
+  /// from — but not the only option, or a driver on a Turkish SIM could not
+  /// sign in at all.
+  final Country country;
+
   bool get canRequestCode =>
-      PhoneNumbers.isValid(phone) && !status.isBusy && resendIn == 0;
+      PhoneNumbers.isValid(phone, country: country) &&
+      !status.isBusy &&
+      resendIn == 0;
 
   bool get canVerify => code.length == AppRules.otpLength && !status.isBusy;
 
@@ -73,6 +83,7 @@ class PhoneSignInState extends Equatable {
     Failure? Function()? failure,
     int? resendIn,
     String? referralCode,
+    Country? country,
   }) {
     return PhoneSignInState(
       step: step ?? this.step,
@@ -85,6 +96,7 @@ class PhoneSignInState extends Equatable {
       failure: failure != null ? failure() : this.failure,
       resendIn: resendIn ?? this.resendIn,
       referralCode: referralCode ?? this.referralCode,
+      country: country ?? this.country,
     );
   }
 
@@ -100,5 +112,6 @@ class PhoneSignInState extends Equatable {
     failure,
     resendIn,
     referralCode,
+    country,
   ];
 }

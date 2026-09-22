@@ -647,4 +647,7 @@ const Map<String, String> kStringsAz = {
   'skipSignIn': 'Lazım deyil',
   'askDriversTitle': 'Axtardığını tapmırsan?',
   'askDriversBody': 'Marşrutunu yaz — həmin yolu sürən sürücülərə çatdıraq.',
+  'countryCodeTitle': 'Ölkə kodu',
+  'countrySearchHint': 'Ölkə və ya kod axtar',
+  'countryNotFound': 'Belə ölkə tapılmadı',
 };
