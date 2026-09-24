@@ -21,6 +21,7 @@ import '../../../../core/widgets/route_timeline.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
+import '../../../profile/domain/entities/user_enums.dart';
 import '../../../profile/presentation/bloc/driver_profile/driver_profile_bloc.dart';
 import '../../domain/entities/route_demand.dart';
 import '../../domain/repositories/demand_repository.dart';
@@ -45,6 +46,22 @@ class PublishRidePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Several screens lead here — the FAB, the demand strip, a passenger's
+    // request — so the approval rule is enforced at the form rather than at
+    // each button. Editing is exempt: the listing already exists.
+    if (rideId == null) {
+      final driverState = context.watch<DriverProfileBloc>().state;
+      if (driverState.profile == null) {
+        return AppScaffold(
+          title: context.l10n.publishRide,
+          body: driverState.status.isFailure
+              ? ErrorState(failure: driverState.failure)
+              : const LoadingState(),
+        );
+      }
+      if (!driverState.canPublishRides) return const _PublishLocked();
+    }
+
     final driver = context.read<DriverProfileBloc>().state.profile;
 
     return BlocProvider<PublishRideBloc>(
@@ -59,6 +76,77 @@ class PublishRidePage extends StatelessWidget {
             ),
           ),
       child: _PublishRideView(isEditing: rideId != null),
+    );
+  }
+}
+
+/// Shown in place of the form while the driver has no car or their documents
+/// are not approved yet — says which, and leads to the fix.
+class _PublishLocked extends StatefulWidget {
+  const _PublishLocked();
+
+  @override
+  State<_PublishLocked> createState() => _PublishLockedState();
+}
+
+class _PublishLockedState extends State<_PublishLocked> {
+  @override
+  void initState() {
+    super.initState();
+    // The profile was read at sign-in; an admin may have approved the
+    // documents since. A fresh read turns this screen into the form by itself.
+    context.read<DriverProfileBloc>().add(
+      const DriverProfileRequested(force: true),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final profile = context.read<DriverProfileBloc>().state.profileOrInitial;
+
+    if (!profile.hasVehicle) {
+      return AppScaffold(
+        title: l10n.publishRide,
+        body: EmptyState(
+          icon: Icons.directions_car_outlined,
+          title: l10n.vehicleInfo,
+          message: l10n.noVehicle,
+          actionLabel: l10n.saveVehicle,
+          onAction: () => context.pushReplacement(Routes.vehicle),
+        ),
+      );
+    }
+
+    final (icon, title, message) = switch (profile.status) {
+      VerificationStatus.pending => (
+        Icons.hourglass_top_rounded,
+        l10n.verificationPending,
+        l10n.verificationPendingBody,
+      ),
+      VerificationStatus.rejected => (
+        Icons.assignment_late_outlined,
+        l10n.verificationRejected,
+        l10n.verificationRejectedBody,
+      ),
+      _ => (
+        Icons.assignment_outlined,
+        l10n.documentsTitle,
+        l10n.documentsSubtitle,
+      ),
+    };
+
+    return AppScaffold(
+      title: l10n.publishRide,
+      body: EmptyState(
+        icon: icon,
+        title: title,
+        message: message,
+        actionLabel: profile.status == VerificationStatus.pending
+            ? l10n.documents
+            : l10n.uploadDocument,
+        onAction: () => context.pushReplacement(Routes.documents),
+      ),
     );
   }
 }

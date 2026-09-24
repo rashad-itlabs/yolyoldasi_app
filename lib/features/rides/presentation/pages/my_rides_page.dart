@@ -117,9 +117,8 @@ class _MyRidesView extends StatelessWidget {
   }
 }
 
-/// Tells the driver what is still outstanding: a car (which blocks publishing
-/// outright) or document verification (which does not — see
-/// [DriverProfile.canPublishRides]).
+/// Tells the driver what is still outstanding before they can publish: a car,
+/// or document verification (see [DriverProfile.canPublishRides]).
 class _DriverStatusBanner extends StatelessWidget {
   const _DriverStatusBanner();
 
@@ -150,7 +149,6 @@ class _DriverStatusBanner extends StatelessWidget {
           );
         }
 
-        // Everything below is advisory: the driver can already publish.
         if (!profile.needsVerification) return const SizedBox.shrink();
 
         final (tone, title, message) = switch (profile.status) {
@@ -201,6 +199,9 @@ class _RidesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final canPublish = context.select<DriverProfileBloc, bool>(
+      (bloc) => bloc.state.canPublishRides,
+    );
 
     return BlocBuilder<MyRidesBloc, MyRidesState>(
       builder: (context, state) {
@@ -224,14 +225,17 @@ class _RidesList extends StatelessWidget {
             .toList(growable: false);
 
         if (visible.isEmpty) {
+          // The banner above already says what is missing; a publish button
+          // here would only lead to the locked form.
+          final showPublish = !includePast && canPublish;
           return EmptyState(
             icon: Icons.directions_car_outlined,
             title: l10n.noRidesYet,
             message: includePast ? null : l10n.noRidesYetBody,
-            actionLabel: includePast ? null : l10n.publishRideShort,
-            onAction: includePast
-                ? null
-                : () => context.push(Routes.publishRide),
+            actionLabel: showPublish ? l10n.publishRideShort : null,
+            onAction: showPublish
+                ? () => context.push(Routes.publishRide)
+                : null,
           );
         }
 
@@ -403,15 +407,18 @@ class _RideActions extends StatelessWidget {
             // Available on finished rides too — in fact especially there. The
             // weekly run is the one worth repeating, and by the time the
             // driver thinks of it the last one is already in the past tab.
-            ListTile(
-              leading: const Icon(Icons.repeat_rounded),
-              title: Text(l10n.repeatRide),
-              subtitle: Text(l10n.repeatRideBody),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _repeat(context);
-              },
-            ),
+            //
+            // A repeat is a new listing, so it needs approved documents too.
+            if (context.read<DriverProfileBloc>().state.canPublishRides)
+              ListTile(
+                leading: const Icon(Icons.repeat_rounded),
+                title: Text(l10n.repeatRide),
+                subtitle: Text(l10n.repeatRideBody),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _repeat(context);
+                },
+              ),
             if (ride.status.isActive || ride.status == RideStatus.inactive)
               ListTile(
                 leading: Icon(

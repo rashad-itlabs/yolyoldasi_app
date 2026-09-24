@@ -54,7 +54,6 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   /// sign-in on the same launch does not prompt again.
   bool _pushStarted = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -132,6 +131,13 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     if (!session.state.isSignedIn) return;
     session.add(const SessionRefreshed());
     context.read<BadgesBloc>().add(const BadgesRefreshed());
+
+    // Publishing waits on an admin approving the documents, which happens
+    // while the app is closed. Without this the driver would come back to a
+    // locked publish button until the next sign-in.
+    context.read<DriverProfileBloc>().add(
+      const DriverProfileRequested(force: true),
+    );
 
     // Re-settling push on resume is how the app notices permission that was
     // granted *outside* it. A user who refuses the prompt, then turns

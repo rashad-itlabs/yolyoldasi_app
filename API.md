@@ -450,7 +450,10 @@ qaytarılır. Səhifədə 20 nəticə. Hər axtarış avtomatik `recent-searches
 | `pickup_point` / `dropoff_point` | ixtiyari, ≤255 |
 | `instant_booking` | ixtiyari; göndərilməsə profilin defaultu |
 
-`422` — sürücü profili yoxdursa və ya avtomobil başqasınındırsa.
+`422` — sürücü profili yoxdursa, avtomobil başqasınındırsa və ya sürücünün
+sənədləri (`driver_profile.status`) `approved` deyilsə. Sonuncu qayda
+`POST /rides/{id}/repeat`-ə də aiddir; qaydadan əvvəl verilmiş elanlara
+toxunulmur.
 
 ### GET `/rides/mine?status=active`
 Sürücünün öz elanları, `departure_at` üzrə azalan.

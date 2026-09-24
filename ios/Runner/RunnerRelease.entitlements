@@ -14,5 +14,12 @@
 	     instead of one file someone has to remember to flip. -->
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- Universal Links for shared rides (/r/{id}). Kept identical to
+	     Runner.entitlements — only aps-environment may differ. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:yolyoldasi.az</string>
+		<string>applinks:www.yolyoldasi.az</string>
+	</array>
 </dict>
 </plist>

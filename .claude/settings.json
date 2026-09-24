@@ -202,7 +202,15 @@
       "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && echo \"=== QONAQ AXTARIŞI recent_searches-i sındırmır? ===\" && grep -n \"Hesabsız axtarış\" -A 4 app/Http/Controllers/Api/RideController.php && echo && echo \"=== RideResource qonaq üçün ===\" && sed -n '9,12p' app/Http/Resources/RideResource.php)",
       "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"994501234567\\\\|Telefon nömrəsi düzgün\" -B 2 -A 3 app/Http/Controllers/Api/AuthController.php | head -14)",
       "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"istifadəçinin yazdığı kimi\\\\|Nömrəni normallaşdırmağa\" -B 4 -A 6 docs/API.md | head -20)",
-      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"auth/phone/request\" -A 18 docs/API.md | head -26)"
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"auth/phone/request\" -A 18 docs/API.md | head -26)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && ls; cat routes/web.php; grep -rn \"well-known\" routes app config 2>/dev/null | head)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && cat app/Http/Controllers/RideShareController.php | head -40; ls config public; ls -a public/.well-known 2>/dev/null)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"document\\\\|driver\" routes/admin.php | head -20; grep -rln \"approved\" app | head -20; grep -rn \"function store\\\\|function repeat\" app/Http/Controllers/Api/*Ride* 2>/dev/null | head; ls app/Http/Controllers app/Http/Controllers/* | head -60)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && cat app/Support/DriverVerification.php; sed -n 1,260p app/Http/Controllers/Api/RideController.php)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && sed -n 260,340p app/Http/Controllers/Api/RideController.php; cd /Users/rashadaliyev/StudioProjects/yolyoldasi && grep -rn \"canPublishRides\\\\|needsVerification\\\\|rideRepeat\\\\|repeatRide\" lib | grep -v \"entities/driver_profile.dart\")",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"driverProfile\\\\|has_driver_profile\" app/Models/User.php | head; grep -n \"^## 9\" -A60 docs/API.md | grep -n \"422\\\\|sənəd\\\\|approved\" | head; cd /Users/rashadaliyev/StudioProjects/yolyoldasi && sed -n 397,475p API.md | grep -n \"422\\\\|sənəd\\\\|approved\\\\|təsdiq\")",
+      "Bash(grep -n -i \"elan ver\\\\|publish\" API.md | head; grep -n \"admin\\\\|approve\" /Users/rashadaliyev/Documents/developer/yolyoldasi/app/Http/Controllers/Admin/DriverController.php | grep -in \"notif\\\\|push\" | head -5)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"Notification\\\\|notify\\\\|function approve\\\\|function reject\" app/Http/Controllers/Admin/DriverController.php | head)"
     ],
     "additionalDirectories": [
       "/Users/rashadaliyev/Documents/developer/yolyoldasi/config",

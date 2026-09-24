@@ -236,7 +236,7 @@ adam üçün bu izaholunmazdır. `SearchHomePage` və `AppShell` bunu açıq yox
 | Profil, avatar, şəhər, doğum ili | `PATCH /me`, `POST /me/photo` | ✅ |
 | Avtomobil | `/vehicles` | ✅ |
 | 4 sənədin yüklənməsi | `POST /driver/documents` | ✅ |
-| Elan vermə şərti | avtomobil (sənəd təsdiqi **şərt deyil** — §9) | ✅ |
+| Elan vermə şərti | avtomobil + 4 sənədin admin təsdiqi (§9) | ✅ |
 | Marşrut elanı (3 addım) | `POST /rides` | ✅ |
 | Elan redaktəsi, aktiv/deaktiv, ləğv, tamamlama | `PUT`/`DELETE /rides/{id}`, `/complete` | ✅ |
 | Axtarış + səhifələmə | `GET /rides` | ✅ |

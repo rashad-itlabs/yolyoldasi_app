@@ -37,8 +37,8 @@ import '../../features/shell/presentation/pages/home_tab.dart';
 import '../extensions/context_extensions.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_states.dart';
-import 'app_guard.dart';
 import 'app_routes.dart';
+import 'shared_links.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'home');
@@ -57,18 +57,26 @@ GoRouter buildRouter({
   required AppUpdateBloc update,
 }) {
   final refresh = _GuardRefresh(session: session, update: update);
+  final sharedLinks = SharedLinkGate();
+  late final GoRouter router;
 
-  return GoRouter(
+  router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
     debugLogDiagnostics: false,
 
     // ------------------------------------------------------------------ guard
-    redirect: (context, state) => AppGuard.redirect(
+    // A redirect cannot push, so the shared ride is opened once the frame that
+    // lands on home has been built.
+    redirect: (context, state) => sharedLinks.redirect(
       session: session.state,
       updateBlocks: update.state.blocks,
+      uri: state.uri,
       location: state.matchedLocation,
+      open: (route) => WidgetsBinding.instance.addPostFrameCallback(
+        (_) => router.push(route),
+      ),
     ),
 
     errorBuilder: (context, state) => AppScaffold(
@@ -265,8 +273,15 @@ GoRouter buildRouter({
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const SettingsPage(),
       ),
+
+      // A ride shared from the website (`https://yolyoldasi.az/r/{id}`). The
+      // top-level redirect answers it before this is reached; the route exists
+      // so the path matches rather than falling through to the error page.
+      GoRoute(path: '/r/:rideId', redirect: (_, _) => Routes.home),
     ],
   );
+
+  return router;
 }
 
 /// Bridges [SessionBloc] and [AppUpdateBloc] to go_router's [Listenable]-based

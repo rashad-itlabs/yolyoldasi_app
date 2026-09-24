@@ -2,12 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yolyoldasi/features/profile/data/models/driver_profile_model.dart';
 import 'package:yolyoldasi/features/profile/domain/entities/user_enums.dart';
 
-/// API.md §9: `POST /rides` answers 422 only when there is no driver profile,
-/// or when the vehicle belongs to somebody else. Document approval is *not*
-/// among its requirements.
-///
-/// The client once also demanded `status == approved`, which made publishing
-/// impossible for every driver — nothing in the product approves documents.
+/// API.md §9: `POST /rides` and `/rides/{id}/repeat` need a car *and* all
+/// four documents approved by an admin. The client mirrors that so a driver is
+/// not walked through a three-step form only to be refused at the end.
 void main() {
   Map<String, dynamic> profile({
     required String status,
@@ -19,25 +16,23 @@ void main() {
   };
 
   group('canPublishRides', () {
-    test('a car is enough, whatever the documents say', () {
-      for (final status in [
-        'not_uploaded',
-        'pending',
-        'rejected',
-        'approved',
-      ]) {
+    test('needs approved documents', () {
+      final driver = DriverProfileModel.fromJson(profile(status: 'approved'));
+      expect(driver.canPublishRides, isTrue);
+    });
+
+    test('a car alone is not enough', () {
+      for (final status in ['not_uploaded', 'pending', 'rejected']) {
         final driver = DriverProfileModel.fromJson(profile(status: status));
         expect(
           driver.canPublishRides,
-          isTrue,
-          reason: 'a driver with a car must be able to publish ($status)',
+          isFalse,
+          reason: 'documents $status must keep publishing locked',
         );
       }
     });
 
-    test('no car means no publishing', () {
-      // The first car is what creates the driver profile (API.md §8), so this
-      // is the one case the API really does refuse.
+    test('no car means no publishing, even when approved', () {
       final driver = DriverProfileModel.fromJson(
         profile(status: 'approved', withVehicle: false),
       );
@@ -63,12 +58,10 @@ void main() {
       expect(driver.status, VerificationStatus.approved);
     });
 
-    test('never blocks publishing', () {
-      // The banner and the button answer different questions; a driver can be
-      // both unverified and able to publish.
+    test('always comes with a locked publish button', () {
       final driver = DriverProfileModel.fromJson(profile(status: 'pending'));
       expect(driver.needsVerification, isTrue);
-      expect(driver.canPublishRides, isTrue);
+      expect(driver.canPublishRides, isFalse);
     });
   });
 }

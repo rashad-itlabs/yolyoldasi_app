@@ -127,18 +127,16 @@ class DriverProfile extends Equatable {
   /// Everything is in: the car is saved and all four documents are uploaded.
   bool get canSubmitForReview => hasVehicle && allDocumentsUploaded;
 
-  /// The gate the publish flow checks.
+  /// The gate the publish flow checks: a car, and all four documents approved
+  /// by an admin (API.md §9). The server refuses `POST /rides` and
+  /// `/rides/{id}/repeat` otherwise; this only keeps the driver from filling
+  /// in a three-step form to be told so at the end.
   ///
-  /// A car is the whole requirement: API.md §9 answers 422 only when there is
-  /// no driver profile or the vehicle belongs to somebody else, and the first
-  /// car is what creates the profile (§8). Document approval is deliberately
-  /// *not* part of this — the API does not ask for it, and gating on it here
-  /// would make publishing impossible for anyone whose documents nobody has
-  /// reviewed yet. Verification is a trust signal, shown on the profile.
-  bool get canPublishRides => hasVehicle;
+  /// Rides already published before the rule are left alone.
+  bool get canPublishRides => hasVehicle && status.isApproved;
 
-  /// Whether the driver still has verification work to do. Drives the banner,
-  /// never the publish button.
+  /// Whether the driver still has verification work to do — or is waiting on
+  /// it. Drives the banner that explains why publishing is locked.
   bool get needsVerification => !status.isApproved;
 
   /// 0–1, for the onboarding progress bar.
