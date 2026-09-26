@@ -295,7 +295,8 @@
       "Bash(patch -s API.deploy.md)",
       "Bash(ssh -o PubkeyAuthentication=no root@193.111.78.47 'cd __TRACKED_VAR__ && date && stat -c '\\\\''%U:%G %a %y %n'\\\\'' bootstrap/cache bootstrap/cache/*')",
       "Bash(ssh -o PubkeyAuthentication=no root@193.111.78.47 \"rm -rf /root/deploy-staging/20260926-booking-instant && rmdir /root/deploy-staging 2>/dev/null; ls -la /root/deploy-backups/20260926-booking-instant\")",
-      "Bash(rm -f /private/tmp/claude-501/-Users-rashadaliyev-StudioProjects-yolyoldasi/d7a74110-e535-44df-b521-75b05a285599/scratchpad/askpass.sh /private/tmp/claude-501/-Users-rashadaliyev-StudioProjects-yolyoldasi/d7a74110-e535-44df-b521-75b05a285599/scratchpad/remote/*.php)"
+      "Bash(rm -f /private/tmp/claude-501/-Users-rashadaliyev-StudioProjects-yolyoldasi/d7a74110-e535-44df-b521-75b05a285599/scratchpad/askpass.sh /private/tmp/claude-501/-Users-rashadaliyev-StudioProjects-yolyoldasi/d7a74110-e535-44df-b521-75b05a285599/scratchpad/remote/*.php)",
+      "Bash(cd /Users/rashadaliyev/Documents/developer/yolyoldasi && grep -n \"read\\\\|function \" app/Http/Controllers/Api/ConversationController.php | head -40; echo ----; grep -n \"function \\\\|unread\\\\|read_at\" app/Services/MessageService.php | head -40; echo ----; grep -n \"function \\\\|unread\\\\|read_at\" app/Http/Controllers/Api/NotificationController.php | head -30; echo ----; grep -n \"conversations\\\\|notifications\" routes/api.php)"
     ],
     "additionalDirectories": [
       "/Users/rashadaliyev/Documents/developer/yolyoldasi/config",

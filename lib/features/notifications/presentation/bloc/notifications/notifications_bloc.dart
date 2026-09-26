@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
@@ -6,6 +8,7 @@ import '../../../../../core/bloc/data_status.dart';
 import '../../../../../core/error/failure.dart';
 import '../../../../../core/error/result.dart';
 import '../../../../../core/network/api_envelope.dart';
+import '../../../../chat/domain/repositories/chat_repository.dart';
 import '../../../domain/entities/app_notification.dart';
 import '../../../domain/repositories/notification_repository.dart';
 
@@ -14,9 +17,11 @@ part 'notifications_state.dart';
 
 /// `GET /notifications` — the notification centre (API.md §13).
 class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
-  NotificationsBloc({required NotificationRepository notifications})
-    : _notifications = notifications,
-      super(const NotificationsState()) {
+  NotificationsBloc({
+    required NotificationRepository notifications,
+    required ChatRepository chat,
+  }) : _notifications = notifications,
+       super(const NotificationsState()) {
     on<NotificationsRequested>(_onRequested, transformer: restartable());
     on<NotificationsFilterChanged>(
       _onFilterChanged,
@@ -25,9 +30,52 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     on<NotificationsMoreRequested>(_onMoreRequested, transformer: droppable());
     on<NotificationRead>(_onRead);
     on<NotificationsAllRead>(_onAllRead);
+    on<_NotificationsThreadRead>(_onThreadRead);
+
+    // A chat row opens its thread on a screen pushed over this one, and the
+    // list is not re-read on the way back. Reading the thread marks all of its
+    // `newMessage` rows read on the server (API.md §11), not just the one
+    // tapped — so without this the others would still look unread here while
+    // the bell had already dropped.
+    _threadsRead = chat.threadsRead.listen(
+      (conversationId) => add(_NotificationsThreadRead(conversationId)),
+    );
   }
 
   final NotificationRepository _notifications;
+  late final StreamSubscription<int> _threadsRead;
+
+  @override
+  Future<void> close() async {
+    await _threadsRead.cancel();
+    return super.close();
+  }
+
+  /// Mirrors what `POST /conversations/{id}/read` did on the server, without
+  /// a round trip: that thread's chat rows become read, nothing else does.
+  void _onThreadRead(
+    _NotificationsThreadRead event,
+    Emitter<NotificationsState> emit,
+  ) {
+    bool belongs(AppNotification n) =>
+        !n.isRead &&
+        n.type == NotificationType.newMessage &&
+        n.conversationId == event.conversationId;
+
+    if (!state.notifications.any(belongs)) return;
+
+    emit(
+      state.copyWith(
+        page: state.page.replacingItems([
+          for (final notification in state.page.items)
+            if (belongs(notification))
+              notification.copyWith(readAt: DateTime.now)
+            else
+              notification,
+        ]),
+      ),
+    );
+  }
 
   Future<void> _onRequested(
     NotificationsRequested event,

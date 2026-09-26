@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
+import '../../../chat/domain/repositories/chat_repository.dart';
 import '../../../shell/presentation/bloc/badges/badges_bloc.dart';
 import '../../domain/entities/app_notification.dart';
 import '../../domain/repositories/notification_repository.dart';
@@ -26,6 +27,7 @@ class NotificationsPage extends StatelessWidget {
     return BlocProvider<NotificationsBloc>(
       create: (context) => NotificationsBloc(
         notifications: context.read<NotificationRepository>(),
+        chat: context.read<ChatRepository>(),
       )..add(const NotificationsRequested()),
       child: const _NotificationsView(),
     );
@@ -40,10 +42,10 @@ class _NotificationsView extends StatelessWidget {
   /// so beats opening a blank screen.
   void _open(BuildContext context, AppNotification item) {
     final bloc = context.read<NotificationsBloc>();
-    if (!item.isRead) {
-      bloc.add(NotificationRead(item.id));
-      context.read<BadgesBloc>().add(const BadgesRefreshed());
-    }
+    // The bell is re-read by [BadgesBloc] once the write has landed
+    // (`NotificationRepository.changes`). Asking for it here, in the same
+    // breath as the write, raced it and could come back with the old count.
+    if (!item.isRead) bloc.add(NotificationRead(item.id));
 
     // An announcement is already fully on screen — its whole text is the row.
     // Marking it read is all a tap can do, and an error toast would be a lie.
@@ -83,10 +85,8 @@ class _NotificationsView extends StatelessWidget {
             ),
             if (state.unreadCount > 0)
               TextButton(
-                onPressed: () {
-                  bloc.add(const NotificationsAllRead());
-                  context.read<BadgesBloc>().add(const BadgesRefreshed());
-                },
+                // The bell follows by itself once the write lands; see [_open].
+                onPressed: () => bloc.add(const NotificationsAllRead()),
                 child: Text(l10n.markAllRead),
               ),
             HGap.sm,

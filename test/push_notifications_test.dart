@@ -827,6 +827,9 @@ class _FakeChatRepository implements ChatRepository {
   bool fail = false;
 
   @override
+  Stream<int> get threadsRead => const Stream<int>.empty();
+
+  @override
   FutureResult<Paginated<Conversation>> conversations({int? page}) async {
     if (fail) {
       return const Err(NetworkFailure(debugMessage: 'offline'));

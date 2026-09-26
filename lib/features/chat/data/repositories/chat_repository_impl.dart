@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../../core/error/result.dart';
 import '../../../../core/network/api_envelope.dart';
 import '../../domain/entities/conversation.dart';
@@ -5,9 +7,13 @@ import '../../domain/repositories/chat_repository.dart';
 import '../services/chat_api_service.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
-  const ChatRepositoryImpl(this._api);
+  ChatRepositoryImpl(this._api);
 
   final ChatApiService _api;
+  final StreamController<int> _threadsRead = StreamController<int>.broadcast();
+
+  @override
+  Stream<int> get threadsRead => _threadsRead.stream;
 
   @override
   FutureResult<Paginated<Conversation>> conversations({int? page}) =>
@@ -24,8 +30,11 @@ class ChatRepositoryImpl implements ChatRepository {
       _api.send(conversationId, text);
 
   @override
-  FutureResult<void> markRead(int conversationId) =>
-      _api.markRead(conversationId);
+  FutureResult<void> markRead(int conversationId) async {
+    final result = await _api.markRead(conversationId);
+    if (result.isOk) _threadsRead.add(conversationId);
+    return result;
+  }
 
   @override
   FutureResult<int> unreadTotal() => _api.unreadTotal();

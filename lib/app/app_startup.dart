@@ -16,7 +16,6 @@ import '../core/widgets/app_feedback.dart';
 import '../features/app_update/presentation/bloc/app_update/app_update_bloc.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/cities/presentation/bloc/cities_bloc.dart';
-import '../features/notifications/domain/entities/app_notification.dart';
 import '../features/profile/domain/entities/user_enums.dart';
 import '../features/profile/domain/repositories/user_repository.dart';
 import '../features/profile/presentation/bloc/driver_profile/driver_profile_bloc.dart';
@@ -279,17 +278,22 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   void _onForeground(PushMessage message) {
     if (!mounted) return;
 
-    // Already reading that thread: the message is about to appear in the list
-    // on its own. A banner over it would be noise.
-    if (_pending.isOpen(message.conversationId)) return;
+    // Re-read, not adjusted. The push stands for rows the server committed
+    // before sending it, so the count already includes them — and a chat push
+    // stands for two, the message and its notification row, so both counters
+    // move. This used to set the counter to 1 while meaning "one more", which
+    // is why the bell reset instead of rising.
+    //
+    // Before the open-thread check, not after: if the user leaves the thread
+    // before its next poll marks the message read, nothing else would re-read
+    // the badges and both would stay one short. While they stay, the poll's
+    // read (`ChatRepository.threadsRead`) lowers them again within a tick.
+    context.read<BadgesBloc>().add(const BadgesRefreshed());
 
-    // The badge is cheaper to adjust than to re-read, and the counter is what
-    // the user sees first.
-    if (message.type == NotificationType.newMessage) {
-      context.read<BadgesBloc>().add(const MessageBadgeAdjusted(1));
-    } else {
-      context.read<BadgesBloc>().add(const NotificationBadgeAdjusted(1));
-    }
+    // Already reading that thread: the message is about to appear in the list
+    // on its own, so a banner over it would be noise. Only `newMessage`
+    // carries a conversation id, so no other banner is swallowed here.
+    if (_pending.isOpen(message.conversationId)) return;
 
     // The server's wording is in whatever language it guessed. The app has the
     // same lines in az/ru/en and knows which one this user reads, so the type

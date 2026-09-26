@@ -63,8 +63,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             conversation: () => _find(conversations),
           ),
         );
-        // Opening the thread clears its badge and stamps `read_at` on the
-        // other side's messages (API.md §11).
+        // Opening the thread clears its badge, stamps `read_at` on the other
+        // side's messages and marks its `newMessage` notifications read
+        // (API.md §11). Fire-and-forget on purpose: when the call succeeds
+        // the repository announces it on `threadsRead`, and the badges, the
+        // conversation list and the notification centre update from that —
+        // even if this screen has been closed by then.
         unawaited(_chat.markRead(state.conversationId));
         _startPolling();
       case Err(:final failure):
@@ -102,9 +106,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       // Only the first page is polled, so anything already paged in is kept by
       // merging rather than replacing.
       final merged = _merge(value.items, state.pending);
+      // An empty thread that stays empty is "nothing new" too. Requiring a
+      // first message here made every tick in a fresh thread — the usual
+      // state right after a booking — mark it read and re-read both badges.
       if (merged.length == state.page.items.length &&
-          merged.isNotEmpty &&
-          merged.first.id == state.page.items.firstOrNull?.id) {
+          merged.firstOrNull?.id == state.page.items.firstOrNull?.id) {
         return; // Nothing new — skip the rebuild.
       }
       emit(state.copyWith(page: state.page.replacingItems(merged)));

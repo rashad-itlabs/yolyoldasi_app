@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
@@ -20,9 +22,23 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     on<ConversationsRequested>(_onRequested, transformer: restartable());
     on<ConversationsMoreRequested>(_onMoreRequested, transformer: droppable());
     on<ConversationMarkedRead>(_onMarkedRead);
+
+    // The list lives in its own tab and is not rebuilt when a thread is opened
+    // from somewhere else — a push, a notification, a booking — so it hears
+    // about the read the same way the badges do.
+    _threadsRead = chat.threadsRead.listen(
+      (conversationId) => add(ConversationMarkedRead(conversationId)),
+    );
   }
 
   final ChatRepository _chat;
+  late final StreamSubscription<int> _threadsRead;
+
+  @override
+  Future<void> close() async {
+    await _threadsRead.cancel();
+    return super.close();
+  }
 
   Future<void> _onRequested(
     ConversationsRequested event,
@@ -69,8 +85,9 @@ class ConversationsBloc extends Bloc<ConversationsEvent, ConversationsState> {
     }
   }
 
-  /// Zeroes a row's badge the moment its thread is opened, without waiting for
-  /// the list to be re-read. The chat screen has already told the server.
+  /// Zeroes a row's badge once the server has confirmed its thread read
+  /// ([ChatRepository.threadsRead]), without waiting for the list to be
+  /// re-read. A read that failed leaves the row counting, as the server does.
   void _onMarkedRead(
     ConversationMarkedRead event,
     Emitter<ConversationsState> emit,

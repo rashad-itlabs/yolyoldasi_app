@@ -174,14 +174,14 @@ class _ConversationsView extends StatelessWidget {
                       ],
                     ),
                   ),
-                  onTap: () async {
-                    await context.push(Routes.conversation(conversation.id));
-                    if (!context.mounted) return;
-                    // Opening the thread marks it read server-side, so both
-                    // the row and the tab badge are stale on the way back.
-                    bloc.add(ConversationMarkedRead(conversation.id));
-                    context.read<BadgesBloc>().add(const BadgesRefreshed());
-                  },
+                  // Opening the thread marks it read on the server. The row
+                  // and the badges follow from that call's success
+                  // (`ChatRepository.threadsRead`), not from coming back
+                  // here: zeroing the row on return also zeroed it when the
+                  // call had failed, and re-reading the badges on return
+                  // could beat the call to the server.
+                  onTap: () =>
+                      context.push(Routes.conversation(conversation.id)),
                 );
               },
             ),

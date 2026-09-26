@@ -7,6 +7,7 @@ import 'package:yolyoldasi/core/error/result.dart';
 import 'package:yolyoldasi/core/localization/app_localizations.dart';
 import 'package:yolyoldasi/core/network/api_envelope.dart';
 import 'package:yolyoldasi/core/theme/app_theme.dart';
+import 'package:yolyoldasi/features/chat/domain/repositories/chat_repository.dart';
 import 'package:yolyoldasi/features/notifications/domain/entities/app_notification.dart';
 import 'package:yolyoldasi/features/notifications/domain/repositories/notification_repository.dart';
 import 'package:yolyoldasi/features/notifications/presentation/pages/notifications_page.dart';
@@ -42,8 +43,14 @@ void main() {
     );
 
     await tester.pumpWidget(
-      RepositoryProvider<NotificationRepository>.value(
-        value: _FakeNotificationRepository(items),
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<NotificationRepository>.value(
+            value: _FakeNotificationRepository(items),
+          ),
+          // The list listens for threads read elsewhere; nothing is read here.
+          RepositoryProvider<ChatRepository>.value(value: _QuietChat()),
+        ],
         child: BlocProvider<BadgesBloc>.value(
           value: badges,
           child: MaterialApp(
@@ -155,6 +162,14 @@ class _FakeNotificationRepository implements NotificationRepository {
     bool unreadOnly = false,
     int? page,
   }) async => Ok(Paginated(items: _items, meta: PageMeta.single));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _QuietChat implements ChatRepository {
+  @override
+  Stream<int> get threadsRead => const Stream<int>.empty();
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

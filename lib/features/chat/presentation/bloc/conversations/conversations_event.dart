@@ -20,7 +20,8 @@ class ConversationsMoreRequested extends ConversationsEvent {
   const ConversationsMoreRequested();
 }
 
-/// Clears one row's unread badge, after the chat screen has told the server.
+/// Clears one row's unread badge, once the server has confirmed the thread
+/// read. Fired by the bloc itself from `ChatRepository.threadsRead`.
 class ConversationMarkedRead extends ConversationsEvent {
   const ConversationMarkedRead(this.conversationId);
 

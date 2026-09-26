@@ -44,3 +44,13 @@ class NotificationRead extends NotificationsEvent {
 class NotificationsAllRead extends NotificationsEvent {
   const NotificationsAllRead();
 }
+
+/// Internal: [ChatRepository.threadsRead] fired for [conversationId].
+class _NotificationsThreadRead extends NotificationsEvent {
+  const _NotificationsThreadRead(this.conversationId);
+
+  final int conversationId;
+
+  @override
+  List<Object?> get props => [conversationId];
+}
