@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
 import '../../../../core/network/api_envelope.dart';
@@ -8,9 +10,20 @@ import '../../domain/repositories/ride_repository.dart';
 import '../services/ride_api_service.dart';
 
 class RideRepositoryImpl implements RideRepository {
-  const RideRepositoryImpl(this._api);
+  RideRepositoryImpl(this._api);
 
   final RideApiService _api;
+  final StreamController<void> _changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get changes => _changes.stream;
+
+  /// Passes [write] through, announcing it on [changes] when it succeeded.
+  Future<Result<T>> _announce<T>(Future<Result<T>> write) async {
+    final result = await write;
+    if (result.isOk) _changes.add(null);
+    return result;
+  }
 
   @override
   FutureResult<Paginated<Ride>> search(
@@ -35,24 +48,26 @@ class RideRepositoryImpl implements RideRepository {
   FutureResult<Ride> byId(int rideId) => _api.byId(rideId);
 
   @override
-  FutureResult<Ride> publish(RideDraft draft) => _api.publish(draft);
+  FutureResult<Ride> publish(RideDraft draft) => _announce(_api.publish(draft));
 
   @override
   FutureResult<Ride> update(int rideId, RideDraft draft) =>
-      _api.update(rideId, draft);
+      _announce(_api.update(rideId, draft));
 
   @override
-  FutureResult<Ride> repeat(int rideId, DateTime departureAt, {int weeks = 1}) =>
-      _api.repeat(rideId, departureAt, weeks: weeks);
+  FutureResult<Ride> repeat(
+    int rideId,
+    DateTime departureAt, {
+    int weeks = 1,
+  }) => _announce(_api.repeat(rideId, departureAt, weeks: weeks));
 
   @override
   FutureResult<Ride> setStatus(int rideId, RideStatus status) =>
-      _api.setStatus(rideId, status);
+      _announce(_api.setStatus(rideId, status));
 
   @override
-  FutureResult<void> cancel(int rideId) => _api.cancel(rideId);
+  FutureResult<void> cancel(int rideId) => _announce(_api.cancel(rideId));
 
   @override
-  FutureResult<void> complete(int rideId) => _api.complete(rideId);
-
+  FutureResult<void> complete(int rideId) => _announce(_api.complete(rideId));
 }

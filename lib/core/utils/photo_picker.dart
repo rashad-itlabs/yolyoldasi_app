@@ -1,9 +1,12 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../extensions/context_extensions.dart';
+import '../network/upload_file.dart';
 import '../theme/app_dimens.dart';
 import '../widgets/app_feedback.dart';
 
@@ -82,13 +85,55 @@ abstract final class PhotoPicker {
     if (file == null) return null;
 
     final bytes = await file.readAsBytes();
+
+    // The content decides, the name is only a fallback — see
+    // [UploadFile.sniffExtension].
     final name = file.name.toLowerCase();
     final dot = name.lastIndexOf('.');
-    final extension = dot == -1 ? 'jpg' : name.substring(dot + 1);
+    final named = dot == -1 ? 'jpg' : name.substring(dot + 1);
+    final extension = UploadFile.sniffExtension(bytes) ?? named;
 
     return PickedPhoto(
       bytes: bytes,
       extension: extension == 'jpeg' ? 'jpg' : extension,
     );
   }
+
+  /// [photo] in one of the [accepted] formats, re-encoded as PNG when it is not
+  /// already; null when the platform cannot decode it either.
+  ///
+  /// image_picker only re-encodes JPEG, PNG and WebP. A HEIC photo from an
+  /// Android gallery comes back untouched and the server refuses it, so it is
+  /// converted here rather than failing on the far side of the upload.
+  static Future<PickedPhoto?> ensureFormat(
+    PickedPhoto photo, {
+    required Set<String> accepted,
+  }) async {
+    if (accepted.contains(photo.extension)) return photo;
+    if (!accepted.contains('png')) return null;
+
+    try {
+      final buffer = await ui.ImmutableBuffer.fromUint8List(photo.bytes);
+      final descriptor = await ui.ImageDescriptor.encoded(buffer);
+      final longest = math.max(descriptor.width, descriptor.height);
+      final scale = longest > _maxSide ? _maxSide / longest : 1.0;
+      final codec = await descriptor.instantiateCodec(
+        targetWidth: (descriptor.width * scale).round(),
+        targetHeight: (descriptor.height * scale).round(),
+      );
+      final frame = await codec.getNextFrame();
+      final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+      frame.image.dispose();
+      codec.dispose();
+      descriptor.dispose();
+      buffer.dispose();
+
+      if (data == null) return null;
+      return PickedPhoto(bytes: data.buffer.asUint8List(), extension: 'png');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static const double _maxSide = 1600;
 }

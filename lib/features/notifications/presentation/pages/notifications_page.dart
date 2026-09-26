@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/router/app_routes.dart';
+import '../../../../core/services/push/pending_deep_link.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_feedback.dart';
@@ -49,16 +49,12 @@ class _NotificationsView extends StatelessWidget {
     // Marking it read is all a tap can do, and an error toast would be a lie.
     if (item.type.isAnnouncement) return;
 
-    switch (item.target) {
-      case ConversationTarget(:final conversationId):
-        context.push(Routes.conversation(conversationId));
-      case BookingTarget(:final bookingId):
-        context.push(Routes.bookingDetail(bookingId));
-      case RideTarget(:final rideId):
-        context.push(Routes.rideDetail(rideId));
-      case _:
-        AppFeedback.error(context, context.l10n.linkUnavailableBody);
+    final route = PendingDeepLink.routeForTarget(item.target);
+    if (route == null) {
+      AppFeedback.error(context, context.l10n.linkUnavailableBody);
+      return;
     }
+    context.push(route);
   }
 
   @override
@@ -134,6 +130,7 @@ class _NotificationsView extends StatelessWidget {
                   final item = state.notifications[index];
                   final (icon, tone) = _visualFor(context, item.type);
                   final actor = item.actor;
+                  final subtitle = _subtitle(context, item);
 
                   return Material(
                     color: item.isRead
@@ -149,7 +146,11 @@ class _NotificationsView extends StatelessWidget {
                           vertical: Gap.md,
                         ),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          // A row with only a title sits level with its icon;
+                          // with a text under it, both start at the top.
+                          crossAxisAlignment: subtitle.isEmpty
+                              ? CrossAxisAlignment.center
+                              : CrossAxisAlignment.start,
                           children: [
                             if (actor != null)
                               AppAvatar(
@@ -199,20 +200,23 @@ class _NotificationsView extends StatelessWidget {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _subtitle(context, item),
-                                    style: context.text.bodySmall?.copyWith(
-                                      color: item.isDeadLink
-                                          ? palette.textTertiary
-                                          : null,
-                                      fontStyle: item.isDeadLink
-                                          ? FontStyle.italic
-                                          : null,
+                                  if (subtitle.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    // No line limit: an announcement has no
+                                    // screen behind it, so this row is the only
+                                    // place its full text can be read.
+                                    Text(
+                                      subtitle,
+                                      style: context.text.bodySmall?.copyWith(
+                                        color: item.isDeadLink
+                                            ? palette.textTertiary
+                                            : null,
+                                        fontStyle: item.isDeadLink
+                                            ? FontStyle.italic
+                                            : null,
+                                      ),
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -232,19 +236,42 @@ class _NotificationsView extends StatelessWidget {
 
   /// The API sends no rendered body — only `payload` and an `actor` — so the
   /// line under the title is built here.
+  ///
+  /// Types with neither an actor nor a seat count used to get an empty line,
+  /// which left the title floating at the top of a tall row. Each of them now
+  /// says something from its own payload, or a fixed line of its own.
   String _subtitle(BuildContext context, AppNotification item) {
     final l10n = context.l10n;
+    final fmt = context.fmt;
     if (item.isDeadLink) return l10n.linkUnavailableTitle;
 
     // The admin wrote this line themselves. There is no actor and no seat
     // count to assemble one from, and there was never meant to be.
     if (item.type.isAnnouncement) return item.body ?? '';
 
+    final reason = item.reason;
+    switch (item.type) {
+      case NotificationType.documentsApproved:
+        return l10n.notifDocsApprovedBody;
+      case NotificationType.documentsRejected:
+        return reason != null
+            ? '${l10n.rejectionReason}: $reason'
+            : l10n.verificationRejectedBody;
+      case NotificationType.rideReminder:
+        final departure = item.departureAt;
+        if (departure != null) {
+          return '${l10n.departure}: ${fmt.dayDotTime(departure)}';
+        }
+      default:
+        break;
+    }
+
     final actor = item.actor?.fullName;
     final seats = item.seats;
     return [
-      if (actor != null && actor.isNotEmpty) context.fmt.shortName(actor),
+      if (actor != null && actor.isNotEmpty) fmt.shortName(actor),
       if (seats != null) l10n.seats(seats),
+      if (reason != null) '${l10n.notifReason}: $reason',
     ].join(' · ');
   }
 
@@ -254,6 +281,12 @@ class _NotificationsView extends StatelessWidget {
       NotificationType.bookingRequested => (
         Icons.person_add_alt_1_rounded,
         context.colors.primary,
+      ),
+      // A seat already taken, not a person asking for one — so it does not
+      // borrow the request's icon, which would read as "waiting on you".
+      NotificationType.bookingInstant => (
+        Icons.event_seat_rounded,
+        palette.success,
       ),
       NotificationType.bookingConfirmed => (
         Icons.check_circle_rounded,
@@ -296,10 +329,7 @@ class _NotificationsView extends StatelessWidget {
       // Both come from a person rather than from something that happened in
       // the app, so they share a megaphone; the colour is what separates a
       // service notice from a promotion.
-      NotificationType.adminMessage => (
-        Icons.campaign_rounded,
-        palette.info,
-      ),
+      NotificationType.adminMessage => (Icons.campaign_rounded, palette.info),
       NotificationType.adminMarketing => (
         Icons.campaign_rounded,
         palette.accent,

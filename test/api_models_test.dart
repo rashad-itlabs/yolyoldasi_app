@@ -441,6 +441,26 @@ void main() {
 
       expect(notification.seats, 2);
     });
+
+    test('reads an instant booking as the driver\'s own type', () {
+      // Sent to the driver when a passenger books an instant-booking ride. It
+      // used to arrive as `bookingConfirmed`, the passenger's wording.
+      final notification = NotificationModel.fromJson({
+        'id': 130,
+        'type': 'bookingInstant',
+        'ride_id': 7,
+        'booking_id': 88,
+        'conversation_id': null,
+        'actor': {'id': 5, 'full_name': 'Aysel Həsənova'},
+        'payload': {'seats': 2},
+        'created_at': '2026-09-26T12:00:00+04:00',
+      });
+
+      expect(notification.type, NotificationType.bookingInstant);
+      expect(notification.actor?.fullName, 'Aysel Həsənova');
+      expect(notification.seats, 2);
+      expect(notification.target, isA<BookingTarget>());
+    });
   });
 
   group('ReviewModel', () {

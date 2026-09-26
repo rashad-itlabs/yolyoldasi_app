@@ -67,3 +67,8 @@ class MyRideCompleted extends MyRidesEvent {
 class MyRidesFailureCleared extends MyRidesEvent {
   const MyRidesFailureCleared();
 }
+
+/// Internal: [RideRepository.changes] fired.
+class _MyRidesChanged extends MyRidesEvent {
+  const _MyRidesChanged();
+}

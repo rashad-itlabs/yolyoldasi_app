@@ -29,6 +29,10 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
 
   final DriverRepository _drivers;
 
+  /// Successful uploads so far — lets a profile read tell whether one landed
+  /// while it was waiting.
+  int _uploads = 0;
+
   Future<void> _onRequested(
     DriverProfileRequested event,
     Emitter<DriverProfileState> emit,
@@ -44,7 +48,17 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
       ),
     );
 
+    final uploadsBefore = _uploads;
     final result = await _drivers.profile();
+
+    // Returning from the camera resumes the app, which re-reads the profile.
+    // If a document went up while that read was in flight, its answer predates
+    // the upload and would show the document as missing again.
+    if (_uploads != uploadsBefore) {
+      emit(state.copyWith(status: DataStatus.success));
+      return;
+    }
+
     switch (result) {
       case Ok(:final value):
         emit(state.copyWith(status: DataStatus.success, profile: () => value));
@@ -84,7 +98,7 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
           uploadingType: () => event.type,
           uploadStatus: ActionStatus.failure,
           failure: () =>
-              const ValidationFailure(FailureCode.invalidInput, field: 'file'),
+              const ValidationFailure(FailureCode.fileTooLarge, field: 'file'),
         ),
       );
       return;
@@ -106,6 +120,7 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
 
     switch (result) {
       case Ok(:final value):
+        _uploads++;
         // The repository already re-read the profile, so the recomputed
         // aggregate status lands with the document.
         emit(

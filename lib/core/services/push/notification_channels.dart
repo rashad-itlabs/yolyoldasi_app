@@ -51,6 +51,7 @@ enum PushChannel {
   static PushChannel forType(NotificationType type) => switch (type) {
     NotificationType.newMessage => PushChannel.messages,
     NotificationType.bookingRequested ||
+    NotificationType.bookingInstant ||
     NotificationType.bookingConfirmed ||
     NotificationType.bookingRejected ||
     NotificationType.bookingCancelled ||

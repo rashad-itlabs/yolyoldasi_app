@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
@@ -24,9 +26,34 @@ class MyRidesBloc extends Bloc<MyRidesEvent, MyRidesState> {
     on<MyRideCancelled>(_onCancelled);
     on<MyRideCompleted>(_onCompleted);
     on<MyRidesFailureCleared>(_onFailureCleared);
+    on<_MyRidesChanged>(_onChanged, transformer: restartable());
+
+    _changes = rides.changes.listen((_) => add(const _MyRidesChanged()));
   }
 
   final RideRepository _rides;
+  late final StreamSubscription<void> _changes;
+
+  @override
+  Future<void> close() async {
+    await _changes.cancel();
+    return super.close();
+  }
+
+  /// A ride was written somewhere else — the publish form, the detail screen,
+  /// or one of this list's own actions. Re-reads in place: the rows stay on
+  /// screen, and a failed read keeps them rather than swapping in an error.
+  Future<void> _onChanged(
+    _MyRidesChanged event,
+    Emitter<MyRidesState> emit,
+  ) async {
+    if (state.status.isFirstLoad) return;
+
+    final result = await _rides.mine(status: state.filter);
+    if (result case Ok(:final value)) {
+      emit(state.copyWith(status: DataStatus.success, page: value));
+    }
+  }
 
   Future<void> _onRequested(
     MyRidesRequested event,

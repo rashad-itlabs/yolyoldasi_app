@@ -163,6 +163,10 @@ class LocalNotifications {
         // stacking a banner per message.
         tag: message.collapseKey,
         groupKey: message.collapseKey,
+        // Without a style Android cuts the body to one line and offers no way
+        // to expand it. Big-text lets the user pull the entry open and read
+        // all of it.
+        styleInformation: BigTextStyleInformation(body, contentTitle: title),
       ),
       iOS: DarwinNotificationDetails(threadIdentifier: message.collapseKey),
     );

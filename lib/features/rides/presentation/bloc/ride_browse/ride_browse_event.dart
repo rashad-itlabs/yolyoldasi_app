@@ -20,3 +20,8 @@ class RideBrowseRequested extends RideBrowseEvent {
 class RideBrowseMoreRequested extends RideBrowseEvent {
   const RideBrowseMoreRequested();
 }
+
+/// Internal: [RideRepository.changes] fired.
+class _RideBrowseChanged extends RideBrowseEvent {
+  const _RideBrowseChanged();
+}

@@ -6,6 +6,14 @@ import '../entities/ride_query.dart';
 
 /// Publishing, editing and searching trips — API.md §9.
 abstract interface class RideRepository {
+  /// Fires after every write that succeeded — publish, edit, repeat, status
+  /// change, cancel, complete.
+  ///
+  /// The driver's list and the passenger home are loaded once and outlive the
+  /// screens that write, so without this a ride published from the form did
+  /// not appear on the home tab until something else happened to reload it.
+  Stream<void> get changes;
+
   /// `GET /rides`. Only `active`, future-dated rides with enough free seats
   /// come back, 20 to a page.
   FutureResult<Paginated<Ride>> search(RideSearchQuery query, {int? page});
@@ -38,5 +46,4 @@ abstract interface class RideRepository {
   /// `POST /rides/{id}/complete` — closes the ride, completes its confirmed
   /// bookings and asks both sides for a review.
   FutureResult<void> complete(int rideId);
-
 }

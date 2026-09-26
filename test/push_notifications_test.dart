@@ -6,6 +6,10 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yolyoldasi/core/error/failure.dart';
 import 'package:yolyoldasi/core/error/result.dart';
+import 'package:yolyoldasi/core/localization/app_strings.dart';
+import 'package:yolyoldasi/core/localization/strings_az.dart';
+import 'package:yolyoldasi/core/localization/strings_en.dart';
+import 'package:yolyoldasi/core/localization/strings_ru.dart';
 import 'package:yolyoldasi/core/network/api_client.dart';
 import 'package:yolyoldasi/core/network/api_envelope.dart';
 import 'package:yolyoldasi/core/services/push/foreground_message_watcher.dart';
@@ -50,6 +54,24 @@ void main() {
       for (final type in NotificationType.values) {
         if (!type.isKnown) continue;
         expect(NotificationType.fromApi(type.apiValue), type);
+      }
+    });
+
+    test('every type has its title line in all three languages', () {
+      // A missing key does not throw: the lookup answers with the key itself,
+      // and the row in the list reads "notifInstantBookingTitle".
+      for (final table in {
+        'az': kStringsAz,
+        'ru': kStringsRu,
+        'en': kStringsEn,
+      }.entries) {
+        for (final type in NotificationType.values) {
+          expect(
+            table.value.keys,
+            contains(type.titleKey),
+            reason: '${table.key}: ${type.name}',
+          );
+        }
       }
     });
 
@@ -144,6 +166,27 @@ void main() {
 
       expect(message.isDeadLink, isTrue);
       expect(PendingDeepLink.routeFor(message), isNull);
+    });
+
+    test('a documents verdict opens the documents page', () {
+      // Neither carries an id — the subject is the driver profile. They used
+      // to read as deleted, so an approval answered its tap with "this no
+      // longer exists".
+      for (final type in ['documentsApproved', 'documentsRejected']) {
+        final message = PushMessage.fromData({'type': type});
+
+        expect(message.target, isA<DocumentsTarget>(), reason: type);
+        expect(message.isDeadLink, isFalse, reason: type);
+        expect(PendingDeepLink.routeFor(message), '/profile/documents');
+      }
+    });
+
+    test('a posted ride request opens the incoming requests', () {
+      // The target existed, but no switch mapped it to a route.
+      final message = PushMessage.fromData({'type': 'rideRequestPosted'});
+
+      expect(message.isDeadLink, isFalse);
+      expect(PendingDeepLink.routeFor(message), '/ride-requests/incoming');
     });
 
     test('a malformed payload degrades instead of throwing', () {
@@ -345,6 +388,77 @@ void main() {
         ..offer(PushMessage.fromData({'type': 'adminMarketing'}));
 
       expect(pending.takeRoute(), '/notifications');
+    });
+  });
+
+  group('an instant booking, told to the driver', () {
+    // The booking is confirmed the moment the passenger taps, and the driver
+    // used to hear about it as `bookingConfirmed` — the passenger's "your
+    // booking is confirmed". The push text and the title in the list are both
+    // chosen by type alone, so the driver needs a type of their own.
+    test('is a wire value this build knows', () {
+      expect(
+        NotificationType.fromApi('bookingInstant'),
+        NotificationType.bookingInstant,
+      );
+      expect(NotificationType.bookingInstant.isKnown, isTrue);
+      expect(NotificationType.bookingInstant.isAnnouncement, isFalse);
+    });
+
+    test('rides the bookings channel, as a request would', () {
+      // Matches `config/onesignal.php`: channel and preference both `bookings`.
+      expect(
+        PushChannel.forType(NotificationType.bookingInstant),
+        PushChannel.bookings,
+      );
+    });
+
+    test('says a seat was booked, not that a booking was confirmed', () {
+      // The same lines the server sends as the push body (its heading is the
+      // passenger's name), so the banner and the row in the list read alike.
+      const expected = {
+        'az': 'Səfərinizə yer bron edildi',
+        'ru': 'Место в вашей поездке забронировано',
+        'en': 'A seat on your ride was booked',
+      };
+      for (final MapEntry(key: code, value: line) in expected.entries) {
+        final strings = AppStrings.of(code);
+        expect(
+          strings.byKey(NotificationType.bookingInstant.titleKey),
+          line,
+          reason: code,
+        );
+        expect(strings.notifInstantBookingTitle, line, reason: code);
+        expect(line, isNot(strings.notifBookingConfirmedTitle), reason: code);
+      }
+    });
+
+    test('opens the booking, from the list and from the banner alike', () {
+      // What the server attaches: the ride, the booking, the passenger as the
+      // actor and the seat count. No conversation id.
+      final row = AppNotification(
+        id: 130,
+        type: NotificationType.bookingInstant,
+        createdAt: DateTime.utc(2026, 9, 26),
+        rideId: 7,
+        bookingId: 88,
+        payload: const {'seats': 2},
+      );
+      expect(row.target, isA<BookingTarget>());
+      expect((row.target as BookingTarget).bookingId, 88);
+      expect(row.isDeadLink, isFalse);
+      expect(PendingDeepLink.routeForTarget(row.target), '/bookings/88');
+
+      final push = PushMessage.fromData({
+        'type': 'bookingInstant',
+        'notification_id': '130',
+        'ride_id': '7',
+        'booking_id': '88',
+        'actor_name': 'Aysel Həsənova',
+      });
+      expect(push.target, isA<BookingTarget>());
+      expect(PendingDeepLink.routeFor(push), '/bookings/88');
+      expect(push.channel, PushChannel.bookings);
     });
   });
 

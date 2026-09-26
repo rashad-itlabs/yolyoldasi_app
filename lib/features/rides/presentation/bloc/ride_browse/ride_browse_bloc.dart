@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
@@ -25,9 +27,34 @@ class RideBrowseBloc extends Bloc<RideBrowseEvent, RideBrowseState> {
       super(const RideBrowseState()) {
     on<RideBrowseRequested>(_onRequested, transformer: restartable());
     on<RideBrowseMoreRequested>(_onMoreRequested, transformer: droppable());
+    on<_RideBrowseChanged>(_onChanged, transformer: restartable());
+
+    // A driver who switches to passenger mode should find the ride they just
+    // published in the list, not the one loaded before they published it.
+    _changes = rides.changes.listen((_) => add(const _RideBrowseChanged()));
   }
 
   final RideRepository _rides;
+  late final StreamSubscription<void> _changes;
+
+  @override
+  Future<void> close() async {
+    await _changes.cancel();
+    return super.close();
+  }
+
+  /// Re-reads the first page in place; a failure keeps what is listed.
+  Future<void> _onChanged(
+    _RideBrowseChanged event,
+    Emitter<RideBrowseState> emit,
+  ) async {
+    if (state.status.isFirstLoad) return;
+
+    final result = await _rides.search(_everything);
+    if (result case Ok(:final value)) {
+      emit(state.copyWith(status: DataStatus.success, page: value));
+    }
+  }
 
   /// No cities and no date: everything on offer. `seats: 1` is the default the
   /// API applies anyway, and it keeps full rides out of a list nobody can book

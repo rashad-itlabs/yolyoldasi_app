@@ -5,8 +5,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yolyoldasi/core/error/failure.dart';
 import 'package:yolyoldasi/core/error/result.dart';
+import 'package:yolyoldasi/core/localization/app_strings.dart';
 import 'package:yolyoldasi/core/network/api_client.dart';
 import 'package:yolyoldasi/core/services/token_storage.dart';
+import 'package:yolyoldasi/core/utils/failure_message.dart';
 
 /// Drives [ApiClient] against a stubbed transport, so the status-code table in
 /// API.md §1 is exercised without a server.
@@ -130,6 +132,21 @@ void main() {
 
     test('500 becomes a ServerFailure', () async {
       expect(await failureFor(500), isA<ServerFailure>());
+    });
+
+    test('413 says the file is too large, not "unexpected error"', () async {
+      // Laravel's PostTooLargeException arrives with an empty message.
+      final failure = await failureFor(413, {'message': ''});
+      expect(failure.code, FailureCode.fileTooLarge);
+      expect(failure.serverMessage, isNull);
+    });
+
+    test('an unlisted status is kept, so the message can name it', () async {
+      final failure = await failureFor(418, {'message': ''});
+      expect(failure, isA<UnknownFailure>());
+      expect((failure as UnknownFailure).statusCode, 418);
+      final az = AppStrings.of('az');
+      expect(failure.message(az), '${az.errUnknown} (418)');
     });
   });
 

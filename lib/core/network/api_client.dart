@@ -181,8 +181,14 @@ class ApiClient {
     );
   }
 
-  /// A `multipart/form-data` upload. Dio sets the boundary itself, so the
-  /// `Content-Type` header is removed rather than overwritten (API.md §16.6).
+  /// A `multipart/form-data` upload (API.md §16.6).
+  ///
+  /// The `Content-Type` is left alone on purpose. Dio replaces it with
+  /// `multipart/form-data; boundary=…` itself whenever the body is [FormData].
+  /// This used to pass `{'Content-Type': null}` to clear the JSON default, but
+  /// Dio counts a null header as present, sees it disagree with the default,
+  /// and throws before sending — so no document or avatar upload ever left the
+  /// phone, and the user saw only "unexpected error".
   FutureResult<T> upload<T>(
     String path, {
     required FormData form,
@@ -193,7 +199,11 @@ class ApiClient {
       () => _dio.request<dynamic>(
         path,
         data: form,
-        options: Options(method: method, headers: {'Content-Type': null}),
+        options: Options(
+          method: method,
+          sendTimeout: AppConfig.uploadTimeout,
+          receiveTimeout: AppConfig.uploadTimeout,
+        ),
       ),
       (data) => parse(Envelope.object(data)),
     );

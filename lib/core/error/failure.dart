@@ -32,6 +32,10 @@ enum FailureCode {
 
   /// The ride takes women passengers only (API.md §21).
   womenOnlyRide,
+
+  /// The upload was bigger than the server takes — a 413, or caught before
+  /// sending by the same limit (API.md §7).
+  fileTooLarge,
   storage,
   cancelled,
   unknown,
@@ -175,6 +179,18 @@ class StorageFailure extends Failure {
 }
 
 class UnknownFailure extends Failure {
-  const UnknownFailure({super.serverMessage, super.debugMessage, super.cause})
-    : super(FailureCode.unknown);
+  const UnknownFailure({
+    this.statusCode,
+    super.serverMessage,
+    super.debugMessage,
+    super.cause,
+  }) : super(FailureCode.unknown);
+
+  /// The HTTP status when the server answered with one the table in API.md §1
+  /// does not cover. Shown next to the generic text, so a screenshot of the
+  /// error is enough to tell what happened.
+  final int? statusCode;
+
+  @override
+  List<Object?> get props => [...super.props, statusCode];
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -23,9 +25,25 @@ class RideDetailBloc extends Bloc<RideDetailEvent, RideDetailState> {
     on<RideDetailCancelled>(_onCancelled);
     on<RideDetailCompleted>(_onCompleted);
     on<RideDetailFailureCleared>(_onFailureCleared);
+
+    // Editing happens on a screen pushed over this one; coming back to the
+    // old price and time would look like the edit had not saved.
+    _changes = rides.changes.listen((_) {
+      final rideId = state.rideId;
+      if (rideId != null && state.ride != null) {
+        add(RideDetailRequested(rideId));
+      }
+    });
   }
 
   final RideRepository _rides;
+  late final StreamSubscription<void> _changes;
+
+  @override
+  Future<void> close() async {
+    await _changes.cancel();
+    return super.close();
+  }
 
   Future<void> _onRequested(
     RideDetailRequested event,

@@ -7,6 +7,17 @@ import '../../../profile/domain/entities/app_user.dart';
 /// `type` field, so the spellings are `camelCase` here and on the server.
 enum NotificationType {
   bookingRequested,
+
+  /// A passenger took a seat on this driver's instant-booking ride (API.md
+  /// §13). Carries `booking_id`, so the tap opens that booking — already
+  /// confirmed, with nothing left for the driver to decide.
+  ///
+  /// Its own type rather than [bookingConfirmed], which is what the driver used
+  /// to receive here. That one is the passenger's news — "your booking is
+  /// confirmed" — and both the push text and the title in this list are picked
+  /// by type alone, so the driver was told their own booking had been accepted.
+  bookingInstant,
+
   bookingConfirmed,
   bookingRejected,
   bookingCancelled,
@@ -65,6 +76,7 @@ enum NotificationType {
   /// heading is missing.
   String get titleKey => switch (this) {
     NotificationType.bookingRequested => 'notifNewBookingTitle',
+    NotificationType.bookingInstant => 'notifInstantBookingTitle',
     NotificationType.bookingConfirmed => 'notifBookingConfirmedTitle',
     NotificationType.bookingRejected => 'notifBookingRejectedTitle',
     NotificationType.bookingCancelled => 'notifBookingCancelledTitle',
@@ -128,6 +140,16 @@ class RideRequestsTarget extends NotificationTarget {
   const RideRequestsTarget();
 }
 
+/// The user's own verification documents.
+///
+/// `documentsApproved` / `documentsRejected` carry no ids — the subject is the
+/// user's driver profile, not a row with an id of its own. Without this target
+/// the missing ids read as "deleted", and an approval answered its own tap with
+/// "this no longer exists".
+class DocumentsTarget extends NotificationTarget {
+  const DocumentsTarget();
+}
+
 /// A single entry in the notification centre — API.md §13.
 class AppNotification extends Equatable {
   const AppNotification({
@@ -167,6 +189,10 @@ class AppNotification extends Equatable {
     if (type == NotificationType.rideRequestPosted) {
       return const RideRequestsTarget();
     }
+    if (type == NotificationType.documentsApproved ||
+        type == NotificationType.documentsRejected) {
+      return const DocumentsTarget();
+    }
     if (conversationId != null && type == NotificationType.newMessage) {
       return ConversationTarget(conversationId!);
     }
@@ -198,6 +224,21 @@ class AppNotification extends Equatable {
     if (value is! String) return null;
     final text = value.trim();
     return text.isEmpty ? null : text;
+  }
+
+  /// Why it happened, when a person gave a reason: the admin rejecting
+  /// documents or cancelling a ride (API.md §13).
+  String? get reason {
+    final value = payload['reason'];
+    if (value is! String) return null;
+    final text = value.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  /// When the ride leaves — sent with `rideReminder`.
+  DateTime? get departureAt {
+    final value = payload['departure_at'];
+    return value is String ? DateTime.tryParse(value)?.toLocal() : null;
   }
 
   /// Extras the title lines interpolate, e.g. the seat count.

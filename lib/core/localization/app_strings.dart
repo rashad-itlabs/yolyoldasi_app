@@ -364,6 +364,7 @@ class AppStrings {
   String get noNotifications => _get('noNotifications');
   String get noNotificationsBody => _get('noNotificationsBody');
   String get notifNewBookingTitle => _get('notifNewBookingTitle');
+  String get notifInstantBookingTitle => _get('notifInstantBookingTitle');
   String get notifBookingConfirmedTitle => _get('notifBookingConfirmedTitle');
   String get notifBookingRejectedTitle => _get('notifBookingRejectedTitle');
   String get notifBookingCancelledTitle => _get('notifBookingCancelledTitle');
@@ -373,6 +374,8 @@ class AppStrings {
   String get notifReviewRequestTitle => _get('notifReviewRequestTitle');
   String get notifDocsApprovedTitle => _get('notifDocsApprovedTitle');
   String get notifDocsRejectedTitle => _get('notifDocsRejectedTitle');
+  String get notifDocsApprovedBody => _get('notifDocsApprovedBody');
+  String get notifReason => _get('notifReason');
   String get notifAdminMessageTitle => _get('notifAdminMessageTitle');
   String get notifAdminMarketingTitle => _get('notifAdminMarketingTitle');
 
@@ -507,6 +510,7 @@ class AppStrings {
   String get errDriverProfileRequired => _get('errDriverProfileRequired');
   String get errWomenOnlyRide => _get('errWomenOnlyRide');
   String get errStorage => _get('errStorage');
+  String get errFileTooLarge => _get('errFileTooLarge');
   String get errCancelled => _get('errCancelled');
   String get errUnknown => _get('errUnknown');
   String get errorTitle => _get('errorTitle');
@@ -636,8 +640,13 @@ class AppStrings {
 
   /// API.md §7: `back_file` only applies to the ID card and the licence,
   /// and both sides travel in the same request.
-  String get docBackSideRequired => _get('docBackSideRequired');
   String get docBothSides => _get('docBothSides');
+  String get docFrontSide => _get('docFrontSide');
+  String get docBackSide => _get('docBackSide');
+  String get docPhoto => _get('docPhoto');
+  String get docAddPhoto => _get('docAddPhoto');
+  String get docTapToChange => _get('docTapToChange');
+  String get docUnsupportedFormat => _get('docUnsupportedFormat');
   String get documentsNoPreview => _get('documentsNoPreview');
   String get seatsIncludeDriver => _get('seatsIncludeDriver');
   String get plateVisibleToYou => _get('plateVisibleToYou');
@@ -806,8 +815,16 @@ class AppStrings {
 
   /// "±1 gün" — how wide a ride request's date window is.
   String flexibleDaysLabel(int days) => switch (languageCode) {
-    'ru' => days == 0 ? 'Точная дата' : '±$days ${_ruPlural(days, 'день', 'дня', 'дней')}',
-    'en' => days == 0 ? 'Exact date' : days == 1 ? '±1 day' : '±$days days',
+    'ru' =>
+      days == 0
+          ? 'Точная дата'
+          : '±$days ${_ruPlural(days, 'день', 'дня', 'дней')}',
+    'en' =>
+      days == 0
+          ? 'Exact date'
+          : days == 1
+          ? '±1 day'
+          : '±$days days',
     _ => days == 0 ? 'Dəqiq tarix' : '±$days gün',
   };
 
@@ -842,18 +859,20 @@ class AppStrings {
   };
 
   String repeatWeeksLabel(int weeks) => switch (languageCode) {
-    'ru' => weeks == 1
-        ? 'Только один раз'
-        : '$weeks ${_ruPlural(weeks, 'неделя', 'недели', 'недель')} подряд',
+    'ru' =>
+      weeks == 1
+          ? 'Только один раз'
+          : '$weeks ${_ruPlural(weeks, 'неделя', 'недели', 'недель')} подряд',
     'en' => weeks == 1 ? 'Just this once' : 'Every week for $weeks weeks',
     _ => weeks == 1 ? 'Yalnız bu dəfə' : '$weeks həftə ardıcıl',
   };
 
   /// How many rides one publish created — the confirmation after a repeat.
   String ridesPublished(int count) => switch (languageCode) {
-    'ru' => count == 1
-        ? 'Объявление размещено'
-        : 'Размещено $count ${_ruPlural(count, 'объявление', 'объявления', 'объявлений')}',
+    'ru' =>
+      count == 1
+          ? 'Объявление размещено'
+          : 'Размещено $count ${_ruPlural(count, 'объявление', 'объявления', 'объявлений')}',
     'en' => count == 1 ? 'Ride published' : '$count rides published',
     _ => count == 1 ? 'Elan verildi' : '$count elan verildi',
   };

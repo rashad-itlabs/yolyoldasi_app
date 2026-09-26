@@ -306,11 +306,13 @@ class _FakeRideRepository implements RideRepository {
   final List<Ride> _rides;
 
   @override
+  Stream<void> get changes => const Stream.empty();
+
+  @override
   FutureResult<Paginated<Ride>> search(
     RideSearchQuery query, {
     int? page,
   }) async => Ok(Paginated(items: _rides, meta: PageMeta.single));
-
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

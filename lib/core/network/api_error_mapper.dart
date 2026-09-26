@@ -88,6 +88,14 @@ abstract final class ApiErrors {
         debugMessage: debug,
         cause: cause,
       ),
+      // Laravel's PostTooLargeException comes with an empty message, and
+      // nginx's with an HTML page — neither is anything to show.
+      413 => ValidationFailure(
+        FailureCode.fileTooLarge,
+        field: 'file',
+        debugMessage: debug,
+        cause: cause,
+      ),
       429 => RateLimitFailure(
         retryAfter: _retryAfter(body, response.headers),
         serverMessage: message,
@@ -100,6 +108,7 @@ abstract final class ApiErrors {
         cause: cause,
       ),
       _ => UnknownFailure(
+        statusCode: status,
         serverMessage: message,
         debugMessage: debug,
         cause: cause,

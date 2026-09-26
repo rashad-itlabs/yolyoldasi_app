@@ -75,13 +75,23 @@ class PendingDeepLink {
     // that is where a tap goes; the push itself is truncated by the tray.
     if (message.type.isAnnouncement) return Routes.notifications;
 
-    return switch (message.target) {
-      ConversationTarget(:final conversationId) => Routes.conversation(
-        conversationId,
-      ),
-      BookingTarget(:final bookingId) => Routes.bookingDetail(bookingId),
-      RideTarget(:final rideId) => Routes.rideDetail(rideId),
-      _ => null,
-    };
+    return routeForTarget(message.target);
   }
+
+  /// Where a [NotificationTarget] leads, or null for a dead link.
+  ///
+  /// The one mapping both taps share — a banner here, a row in the
+  /// notification centre. Each used to keep its own switch, and a target added
+  /// to the entity ([RideRequestsTarget]) reached neither: the fallback arm
+  /// swallowed it and the tap said "this no longer exists".
+  static String? routeForTarget(NotificationTarget target) => switch (target) {
+    ConversationTarget(:final conversationId) => Routes.conversation(
+      conversationId,
+    ),
+    BookingTarget(:final bookingId) => Routes.bookingDetail(bookingId),
+    RideTarget(:final rideId) => Routes.rideDetail(rideId),
+    RideRequestsTarget() => Routes.rideRequestsIncoming,
+    DocumentsTarget() => Routes.documents,
+    _ => null,
+  };
 }

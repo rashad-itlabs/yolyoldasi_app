@@ -12,6 +12,9 @@ extension FailureMessage on Failure {
   String message(AppStrings strings) {
     final fromServer = serverMessage?.trim();
     if (fromServer != null && fromServer.isNotEmpty) return fromServer;
+    if (this case UnknownFailure(:final statusCode?)) {
+      return '${strings.byKey(_key)} ($statusCode)';
+    }
     return strings.byKey(_key);
   }
 
@@ -36,6 +39,7 @@ extension FailureMessage on Failure {
     FailureCode.documentsRejected => 'errDocumentsRejected',
     FailureCode.driverProfileRequired => 'errDriverProfileRequired',
     FailureCode.womenOnlyRide => 'errWomenOnlyRide',
+    FailureCode.fileTooLarge => 'errFileTooLarge',
     FailureCode.storage => 'errStorage',
     FailureCode.cancelled => 'errCancelled',
     FailureCode.unknown => 'errUnknown',

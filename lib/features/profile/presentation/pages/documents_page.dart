@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
+import '../../../../core/widgets/pressable.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../domain/entities/driver_profile.dart';
 import '../../domain/entities/user_enums.dart';
@@ -109,6 +110,9 @@ class DocumentsPage extends StatelessWidget {
                 VGap.xl,
                 for (final document in profile.documents) ...[
                   _DocumentTile(
+                    // Keeps the photos picked so far attached to their
+                    // document when the list rebuilds around them.
+                    key: ValueKey(document.type),
                     document: document,
                     isUploading: state.isUploading(document.type),
                     // A document under review or already approved is not
@@ -201,8 +205,16 @@ class _StatusBanner extends StatelessWidget {
   }
 }
 
-class _DocumentTile extends StatelessWidget {
+/// One of the four documents: its status, and — while it can still be sent —
+/// a slot per side to fill before sending.
+///
+/// The sides are picked one at a time and held here until both are in. The
+/// first version opened the picker twice in a row with nothing to say which
+/// side it wanted, so drivers photographed the front twice or backed out of
+/// the second prompt and lost the first photo with it.
+class _DocumentTile extends StatefulWidget {
   const _DocumentTile({
+    super.key,
     required this.document,
     required this.isUploading,
     required this.locked,
@@ -212,41 +224,71 @@ class _DocumentTile extends StatelessWidget {
   final bool isUploading;
   final bool locked;
 
-  /// Collects the front and, for the two-sided types, the back — then sends
-  /// both in the single `POST /driver/documents` the API expects.
-  Future<void> _upload(BuildContext context) async {
+  @override
+  State<_DocumentTile> createState() => _DocumentTileState();
+}
+
+class _DocumentTileState extends State<_DocumentTile> {
+  /// What the document endpoint takes (API.md §7). Anything else is converted
+  /// before it is held, so a slot only ever shows what will be sent.
+  static const _accepted = {'jpg', 'png'};
+
+  PickedPhoto? _front;
+  PickedPhoto? _back;
+
+  VerificationDocument get _document => widget.document;
+
+  bool get _ready =>
+      _front != null && (!_document.needsBackSide || _back != null);
+
+  @override
+  void didUpdateWidget(covariant _DocumentTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A new upload landed — the photos held here are the ones just sent.
+    if (oldWidget.document.uploadedAt != _document.uploadedAt ||
+        oldWidget.document.status != _document.status) {
+      _front = null;
+      _back = null;
+    }
+  }
+
+  Future<void> _pick({required bool back}) async {
     final l10n = context.l10n;
-    final bloc = context.read<DriverProfileBloc>();
 
-    final front = await PhotoPicker.pick(context);
-    if (front == null || !context.mounted) return;
+    final picked = await PhotoPicker.pick(context);
+    if (picked == null || !mounted) return;
 
-    UploadFile? back;
-    if (document.needsBackSide) {
-      final second = await PhotoPicker.pick(context);
-      if (!context.mounted) return;
-      if (second == null) {
-        // Sending only one side of a two-sided document would be rejected, so
-        // the upload is abandoned rather than half-sent.
-        AppFeedback.error(context, l10n.docBackSideRequired);
-        return;
-      }
-      back = UploadFile.fromExtension(
-        bytes: second.bytes,
-        extension: second.extension,
-        baseName: '${document.type.apiValue}_back',
-      );
+    final photo = await PhotoPicker.ensureFormat(picked, accepted: _accepted);
+    if (!mounted) return;
+    if (photo == null) {
+      AppFeedback.error(context, l10n.docUnsupportedFormat);
+      return;
     }
 
-    bloc.add(
+    setState(() => back ? _back = photo : _front = photo);
+  }
+
+  void _send() {
+    final front = _front;
+    if (front == null) return;
+    final back = _back;
+    final type = _document.type.apiValue;
+
+    context.read<DriverProfileBloc>().add(
       DriverDocumentUploaded(
-        type: document.type,
+        type: _document.type,
         file: UploadFile.fromExtension(
           bytes: front.bytes,
           extension: front.extension,
-          baseName: '${document.type.apiValue}_front',
+          baseName: '${type}_front',
         ),
-        backFile: back,
+        backFile: _document.needsBackSide && back != null
+            ? UploadFile.fromExtension(
+                bytes: back.bytes,
+                extension: back.extension,
+                baseName: '${type}_back',
+              )
+            : null,
       ),
     );
   }
@@ -255,6 +297,7 @@ class _DocumentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final palette = context.palette;
+    final document = _document;
 
     final (title, description) = switch (document.type) {
       DocumentType.idCard => (l10n.docIdCard, l10n.docIdCardDesc),
@@ -318,18 +361,34 @@ class _DocumentTile extends StatelessWidget {
             ),
           ],
 
-          if (!locked) ...[
+          if (!widget.locked) ...[
             VGap.lg,
-            AppButton.secondary(
-              label: document.isUploaded
-                  ? l10n.changePhoto
-                  : l10n.uploadDocument,
-              icon: Icons.upload_file_rounded,
-              size: AppButtonSize.compact,
-              isLoading: isUploading,
-              onPressed: () => _upload(context),
+            Row(
+              children: [
+                Expanded(
+                  child: _SideSlot(
+                    label: document.needsBackSide
+                        ? l10n.docFrontSide
+                        : l10n.docPhoto,
+                    photo: _front,
+                    enabled: !widget.isUploading,
+                    onTap: () => _pick(back: false),
+                  ),
+                ),
+                if (document.needsBackSide) ...[
+                  HGap.md,
+                  Expanded(
+                    child: _SideSlot(
+                      label: l10n.docBackSide,
+                      photo: _back,
+                      enabled: !widget.isUploading,
+                      onTap: () => _pick(back: true),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (document.needsBackSide) ...[
+            if (document.needsBackSide && !_ready) ...[
               VGap.sm,
               Text(
                 l10n.docBothSides,
@@ -338,8 +397,139 @@ class _DocumentTile extends StatelessWidget {
                 ),
               ),
             ],
+            VGap.md,
+            AppButton(
+              label: l10n.submitForReview,
+              icon: Icons.upload_file_rounded,
+              size: AppButtonSize.compact,
+              isLoading: widget.isUploading,
+              onPressed: _ready ? _send : null,
+            ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// One side of a document: an empty frame asking for a photo, or the photo
+/// that will be sent, tappable to replace it.
+class _SideSlot extends StatelessWidget {
+  const _SideSlot({
+    required this.label,
+    required this.photo,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final PickedPhoto? photo;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  /// ID-1, the size of an ID card and a driving licence.
+  static const double _cardRatio = 85.6 / 54;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = context.palette;
+    final photo = this.photo;
+    final hasPhoto = photo != null;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: Pressable(
+        onTap: enabled ? onTap : null,
+        borderRadius: Radii.mdAll,
+        child: AspectRatio(
+          aspectRatio: _cardRatio,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.surfaceSunken,
+              borderRadius: Radii.mdAll,
+              border: Border.all(
+                color: hasPhoto ? palette.success : palette.borderStrong,
+                width: hasPhoto ? 1.5 : 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: Radii.mdAll,
+              child: hasPhoto
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.memory(
+                          photo.bytes,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                        ),
+                        Positioned(
+                          top: Gap.xs,
+                          right: Gap.xs,
+                          child: Icon(
+                            Icons.check_circle_rounded,
+                            color: palette.success,
+                            size: 22,
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ColoredBox(
+                            color: palette.overlay,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: Gap.sm,
+                                vertical: Gap.xs,
+                              ),
+                              child: Text(
+                                '$label · ${l10n.docTapToChange}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.text.labelSmall?.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(Gap.sm),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_a_photo_outlined,
+                            color: palette.textSecondary,
+                          ),
+                          VGap.xs,
+                          Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.titleSmall,
+                          ),
+                          Text(
+                            l10n.docAddPhoto,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.labelSmall?.copyWith(
+                              color: palette.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ),
       ),
     );
   }

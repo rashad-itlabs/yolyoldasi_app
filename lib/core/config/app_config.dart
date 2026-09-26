@@ -56,6 +56,11 @@ abstract final class AppConfig {
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 20);
 
+  /// Multipart uploads. Dart only flushes the request body once it starts
+  /// waiting for the response, so on a slow mobile connection the receive
+  /// clock is also running while the photos go out.
+  static const Duration uploadTimeout = Duration(seconds: 90);
+
   /// Logs every request and response body. Off by default because the bodies
   /// contain phone numbers and bearer tokens.
   static const bool logHttp = bool.fromEnvironment('LOG_HTTP');

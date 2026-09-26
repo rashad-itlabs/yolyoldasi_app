@@ -86,8 +86,9 @@ document.status:       not_uploaded | pending | approved | rejected
 report.reason:       no_show | unsafe_driving | rude_behaviour
                      | wrong_vehicle | price_dispute | spam | other
 
-notification.type:   bookingRequested | bookingConfirmed | bookingRejected
-                     | bookingCancelled | rideReminder | rideCancelled
+notification.type:   bookingRequested | bookingInstant | bookingConfirmed
+                     | bookingRejected | bookingCancelled
+                     | rideReminder | rideCancelled
                      | newMessage | reviewRequest
                      | documentsApproved | documentsRejected
 ```
@@ -504,6 +505,9 @@ səfər sayğacları artır, hər iki tərəfə rəy tələbi göndərilir.
 Cavabda `conversation_id` gəlir — **söhbət rezervasiya ilə birlikdə açılır**,
 tərəflər təsdiqdən əvvəl də yazışa bilir.
 
+Elanı paylaşan sürücüyə bildiriş gedir: adi rejimdə `bookingRequested`, ani
+bronda `bookingInstant` (§13).
+
 Xətalar:
 `422` öz səfərin · `422` səfər aktiv deyil · `422` vaxtı keçib ·
 `422` boş yer yoxdur (yalnız `instant_booking`-də) ·
@@ -644,8 +648,8 @@ müəyyən edir — `target` və rol avtomatik təyin olunur.
 ```json
 { "data": [{
   "id": 120,
-  "type": "bookingConfirmed",
-  "ride_id": 7, "booking_id": 88, "conversation_id": 14,
+  "type": "bookingRequested",
+  "ride_id": 7, "booking_id": 88, "conversation_id": null,
   "actor": { "...": "qısa profil" },
   "payload": { "seats": 2 },
   "read_at": null,
@@ -657,6 +661,35 @@ müəyyən edir — `target` və rol avtomatik təyin olunur.
 ekrana keçəcəyini göstərir. **Hər üçü `null` ola bilər** — əlaqəli obyekt
 silinibsə keçid ölür. Klient bu halda siyahıda qalan bildirişə toxunanda
 boş ekran yox, "artıq mövcud deyil" mesajı göstərməlidir.
+
+### Yeni bron: kimə hansı növ gedir
+
+`POST /rides/{id}/bookings` sürücüyə səfərin rejiminə görə **iki fərqli**
+bildiriş göndərir:
+
+| `type` | Kimə | Nə vaxt |
+|---|---|---|
+| `bookingRequested` | sürücüyə | sərnişin yer istədi, `instant_booking = false` — bron `pending`-dir, sürücü təsdiqləməli və ya rədd etməlidir |
+| `bookingInstant` | sürücüyə | sərnişin yer bron etdi, `instant_booking = true` — bron artıq `confirmed`-dir, sürücüdən qərar gözlənilmir |
+| `bookingConfirmed` | sərnişinə | sürücü sorğunu təsdiqlədi (`POST /bookings/{id}/confirm`) |
+
+`bookingRequested` və `bookingInstant` eyni sahələri daşıyır: `ride_id`,
+`booking_id`, `actor` — bron edən sərnişin, `payload.seats` — tutulan yer sayı.
+`conversation_id` **null**-dur. Hər ikisi `bookings` kanalında gedir və
+`notification_preferences.bookings` açarına tabedir. Toxunanda `booking_id`
+üzrə rezervasiya ekranı açılır.
+
+`bookingInstant`-in mətni: az `Səfərinizə yer bron edildi` ·
+ru `Место в вашей поездке забронировано` · en `A seat on your ride was booked`.
+Push-da bu mətn gövdədir, başlıq isə sərnişinin adıdır; tətbiqin siyahısında
+həmin mətn başlıq olur.
+
+> Əvvəllər ani bronda sürücüyə `bookingConfirmed` gedirdi. O, sərnişinin
+> mətnidir — "Bronunuz təsdiqləndi" — və həm push, həm də tətbiqdəki başlıq
+> yalnız `type`-a görə seçildiyi üçün sürücüyə öz bronunun təsdiqləndiyi
+> deyilirdi. İndi `bookingConfirmed` yalnız sərnişinə gedir. Bu növü tanımayan
+> köhnə tətbiq versiyası da toxunuşu `booking_id`-yə görə rezervasiyaya
+> aparır; yalnız siyahıdakı başlıq bu növə aid olmur.
 
 ### Push payload
 
