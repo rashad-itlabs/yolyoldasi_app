@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,6 +15,7 @@ import 'package:yolyoldasi/core/widgets/otp_input.dart';
 import 'package:yolyoldasi/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:yolyoldasi/features/auth/data/services/auth_api_service.dart';
 import 'package:yolyoldasi/features/auth/presentation/bloc/phone_sign_in/phone_sign_in_bloc.dart';
+import 'package:yolyoldasi/features/auth/presentation/bloc/session/session_bloc.dart';
 import 'package:yolyoldasi/features/auth/presentation/pages/login_page.dart';
 import 'package:yolyoldasi/features/profile/data/services/device_token_api_service.dart';
 import 'package:yolyoldasi/features/profile/domain/entities/user_enums.dart';
@@ -47,8 +49,13 @@ void main() {
     return bloc;
   }
 
-  Widget wrap(PhoneSignInBloc bloc) => BlocProvider<PhoneSignInBloc>.value(
-    value: bloc,
+  Widget wrap(PhoneSignInBloc bloc) => MultiBlocProvider(
+    providers: [
+      BlocProvider<PhoneSignInBloc>.value(value: bloc),
+      // Always above the screen in the app; it closes itself once the account
+      // is ready, so it listens for that.
+      BlocProvider<SessionBloc>.value(value: _signedOutSession()),
+    ],
     child: MaterialApp(
       theme: AppTheme.light,
       locale: const Locale('az'),
@@ -249,4 +256,17 @@ class _StubAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+class _MockSessionBloc extends MockBloc<SessionEvent, SessionState>
+    implements SessionBloc {}
+
+SessionBloc _signedOutSession() {
+  final session = _MockSessionBloc();
+  whenListen(
+    session,
+    const Stream<SessionState>.empty(),
+    initialState: const SessionState(status: SessionStatus.signedOut),
+  );
+  return session;
 }

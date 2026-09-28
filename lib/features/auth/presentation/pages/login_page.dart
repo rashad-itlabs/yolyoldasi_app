@@ -72,81 +72,98 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<PhoneSignInBloc, PhoneSignInState>(
-      listenWhen: (previous, current) =>
-          (previous.session != current.session && current.session != null) ||
-          (previous.code != current.code && current.code.isEmpty),
-      listener: (context, state) {
-        // The session is what actually signs the user in; the router redirects
-        // as soon as it flips. The chosen mode rides along, so the first screen
-        // the user lands on is already the right side of the app.
-        if (state.session != null) {
-          // The end of the sign-up funnel. `is_new_user` is what separates a
-          // returning user from an acquisition, and `has_referral` says
-          // whether an invite brought them.
-          context.read<Analytics>().log(
-            Ev.signInCompleted,
-            params: {
-              'mode': state.mode.apiValue,
-              'is_new_user': state.session!.isNewUser,
-              'has_referral': state.referralCode.trim().isNotEmpty,
-            },
-          );
-
-          context.read<SessionBloc>().add(
-            SessionSignedIn(state.session!, mode: state.mode),
-          );
-          return;
-        }
-        // The bloc dropped the code — it was wrong, expired, or a fresh one was
-        // just issued. The boxes own their own text, so they have to be told.
-        _otpKey.currentState?.clear();
+    return BlocListener<SessionBloc, SessionState>(
+      // A pushed sign-in screen is invisible to the guard: go_router hands the
+      // redirect the location *underneath* it, which is already allowed, so
+      // nothing would ever take this screen down. Once the account is ready it
+      // closes itself, and the user is back where sign-in was asked for — the
+      // ride they meant to book, or home. Reached by `go` (from onboarding)
+      // there is nothing to pop, and the guard's `/login` → `/home` does it.
+      listenWhen: (previous, current) => !previous.isReady && current.isReady,
+      listener: (context, _) {
+        // After the frame, not now: the same state change refreshes the
+        // router, and that refresh re-reads the stack as it was — sign-in
+        // still on top — undoing a pop made before it lands.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted && context.canPop()) context.pop();
+        });
       },
-      builder: (context, state) {
-        final l10n = context.l10n;
+      child: BlocConsumer<PhoneSignInBloc, PhoneSignInState>(
+        listenWhen: (previous, current) =>
+            (previous.session != current.session && current.session != null) ||
+            (previous.code != current.code && current.code.isEmpty),
+        listener: (context, state) {
+          // The session is what actually signs the user in; the router redirects
+          // as soon as it flips. The chosen mode rides along, so the first screen
+          // the user lands on is already the right side of the app.
+          if (state.session != null) {
+            // The end of the sign-up funnel. `is_new_user` is what separates a
+            // returning user from an acquisition, and `has_referral` says
+            // whether an invite brought them.
+            context.read<Analytics>().log(
+              Ev.signInCompleted,
+              params: {
+                'mode': state.mode.apiValue,
+                'is_new_user': state.session!.isNewUser,
+                'has_referral': state.referralCode.trim().isNotEmpty,
+              },
+            );
 
-        return DismissKeyboard(
-          child: AppScaffold(
-            // The way out of the sign-in screen.
-            //
-            // Browsing does not need an account (API.md §18), so this screen is
-            // an offer rather than a gate — and an offer needs a "no". Without
-            // it, anyone who arrives here by pressing a button they did not
-            // mean to is stuck asking for an SMS to get back to the search
-            // form.
-            //
-            // `go`, not `pop`: the screen is reached both by a push (from a
-            // booking button) and by a replace (from onboarding), and only one
-            // of those has anything to pop back to.
-            actions: [
-              if (state.step.isPhone)
-                TextButton(
-                  onPressed: () => context.go(Routes.home),
-                  child: Text(l10n.skipSignIn),
+            context.read<SessionBloc>().add(
+              SessionSignedIn(state.session!, mode: state.mode),
+            );
+            return;
+          }
+          // The bloc dropped the code — it was wrong, expired, or a fresh one was
+          // just issued. The boxes own their own text, so they have to be told.
+          _otpKey.currentState?.clear();
+        },
+        builder: (context, state) {
+          final l10n = context.l10n;
+
+          return DismissKeyboard(
+            child: AppScaffold(
+              // The way out of the sign-in screen.
+              //
+              // Browsing does not need an account (API.md §18), so this screen is
+              // an offer rather than a gate — and an offer needs a "no". Without
+              // it, anyone who arrives here by pressing a button they did not
+              // mean to is stuck asking for an SMS to get back to the search
+              // form.
+              //
+              // `go`, not `pop`: the screen is reached both by a push (from a
+              // booking button) and by a replace (from onboarding), and only one
+              // of those has anything to pop back to.
+              actions: [
+                if (state.step.isPhone)
+                  TextButton(
+                    onPressed: () => context.go(Routes.home),
+                    child: Text(l10n.skipSignIn),
+                  ),
+                HGap.sm,
+              ],
+              body: SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    Gap.page,
+                    Gap.xxxl,
+                    Gap.page,
+                    Gap.xxl,
+                  ),
+                  children: [
+                    const BrandMark(size: 56),
+                    VGap.xxl,
+                    if (state.step.isPhone)
+                      ..._phoneStep(context, state)
+                    else
+                      ..._codeStep(context, state),
+                  ],
                 ),
-              HGap.sm,
-            ],
-            body: SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  Gap.page,
-                  Gap.xxxl,
-                  Gap.page,
-                  Gap.xxl,
-                ),
-                children: [
-                  const BrandMark(size: 56),
-                  VGap.xxl,
-                  if (state.step.isPhone)
-                    ..._phoneStep(context, state)
-                  else
-                    ..._codeStep(context, state),
-                ],
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -213,7 +230,8 @@ class _LoginPageState extends State<LoginPage> {
       VGap.xl,
       AppPickerField(
         label: l10n.countryCodeTitle,
-        value: '${state.country.flag}  ${state.country.name}  '
+        value:
+            '${state.country.flag}  ${state.country.name}  '
             '${state.country.prefix}',
         icon: Icons.public_rounded,
         onTap: () => _pickCountry(context, state.country),
@@ -456,7 +474,6 @@ class _TermsTextState extends State<_TermsText> {
     );
   }
 }
-
 
 /// The optional invite-code field, collapsed until asked for.
 class _ReferralField extends StatefulWidget {

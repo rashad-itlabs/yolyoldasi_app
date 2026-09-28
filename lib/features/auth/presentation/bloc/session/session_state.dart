@@ -24,6 +24,7 @@ class SessionState extends Equatable {
     this.pendingMode,
     this.onboardingSeen = false,
     this.isWorking = false,
+    this.signingIn = false,
     this.failure,
   });
 
@@ -43,6 +44,14 @@ class SessionState extends Equatable {
 
   /// A sign-out or account deletion is in flight.
   final bool isWorking;
+
+  /// A code was just accepted and `/me` is on its way.
+  ///
+  /// The status is [SessionStatus.booting] meanwhile — there is no profile to
+  /// judge yet — but unlike a cold start the user is already looking at a
+  /// screen, so the guard leaves them on it instead of sending them to the
+  /// splash. See `AppGuard.redirect`.
+  final bool signingIn;
 
   /// Set when signing out or deleting failed. Sign-in failures belong to
   /// [PhoneSignInBloc], not here.
@@ -64,6 +73,7 @@ class SessionState extends Equatable {
     UserMode? Function()? pendingMode,
     bool? onboardingSeen,
     bool? isWorking,
+    bool? signingIn,
     Failure? Function()? failure,
   }) {
     return SessionState(
@@ -72,6 +82,7 @@ class SessionState extends Equatable {
       pendingMode: pendingMode != null ? pendingMode() : this.pendingMode,
       onboardingSeen: onboardingSeen ?? this.onboardingSeen,
       isWorking: isWorking ?? this.isWorking,
+      signingIn: signingIn ?? this.signingIn,
       failure: failure != null ? failure() : this.failure,
     );
   }
@@ -89,6 +100,7 @@ class SessionState extends Equatable {
     pendingMode,
     onboardingSeen,
     isWorking,
+    signingIn,
     failure,
   ];
 }

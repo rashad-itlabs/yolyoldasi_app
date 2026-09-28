@@ -86,11 +86,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     emit(
       state.copyWith(
         status: SessionStatus.booting,
+        signingIn: true,
         pendingMode: () => event.mode,
         failure: () => null,
       ),
     );
     await _loadProfile(emit);
+    emit(state.copyWith(signingIn: false));
     await _applyPendingMode(emit);
   }
 
@@ -214,7 +216,8 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     if (event.mode.isDriver && !user.hasDriverProfile) {
       emit(
         state.copyWith(
-          failure: () => const ValidationFailure(FailureCode.driverProfileRequired),
+          failure: () =>
+              const ValidationFailure(FailureCode.driverProfileRequired),
         ),
       );
       return;

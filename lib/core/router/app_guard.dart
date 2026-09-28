@@ -15,11 +15,7 @@ const _authRoutes = {Routes.splash, Routes.onboarding, Routes.login};
 /// Everything that *writes* — booking, messaging, publishing, posting a
 /// request — still needs an account, and each of those buttons sends the
 /// visitor to sign in at the moment they reach for it.
-const _guestRoutes = {
-  Routes.home,
-  Routes.searchResults,
-  Routes.login,
-};
+const _guestRoutes = {Routes.home, Routes.searchResults, Routes.login};
 
 /// Whether a signed-out visitor may stay on [location].
 ///
@@ -53,6 +49,12 @@ abstract final class AppGuard {
 
     switch (session.status) {
       case SessionStatus.booting:
+        // Right after a code is accepted: stay on the sign-in screen until
+        // `/me` answers. Sending the user to the splash tore the tab shell
+        // down, and `/me` answering inside the page transition built the next
+        // one while the old one was still leaving — two copies of the shell's
+        // GlobalKey, and a home tab that rendered white under the tab bar.
+        if (session.signingIn) return null;
         return location == Routes.splash ? null : Routes.splash;
 
       case SessionStatus.signedOut:

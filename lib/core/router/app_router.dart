@@ -294,14 +294,18 @@ class _GuardRefresh extends ChangeNotifier {
   _GuardRefresh({required SessionBloc session, required AppUpdateBloc update}) {
     _status = session.state.status;
     _onboardingSeen = session.state.onboardingSeen;
+    _signingIn = session.state.signingIn;
     _blocked = update.state.blocks;
 
     _session = session.stream.listen((state) {
-      if (state.status == _status && state.onboardingSeen == _onboardingSeen) {
+      if (state.status == _status &&
+          state.onboardingSeen == _onboardingSeen &&
+          state.signingIn == _signingIn) {
         return;
       }
       _status = state.status;
       _onboardingSeen = state.onboardingSeen;
+      _signingIn = state.signingIn;
       notifyListeners();
     });
 
@@ -314,6 +318,7 @@ class _GuardRefresh extends ChangeNotifier {
 
   late SessionStatus _status;
   late bool _onboardingSeen;
+  late bool _signingIn;
   late bool _blocked;
 
   late final StreamSubscription<SessionState> _session;

@@ -66,6 +66,9 @@ class SharedLinkGate {
 
     final parked = _parked;
     if (parked != null &&
+        // While the session boots nothing is settled — and during sign-in the
+        // guard lets every location stand, which would read as "allowed".
+        !session.isBooting &&
         AppGuard.redirect(
               session: session,
               updateBlocks: updateBlocks,
