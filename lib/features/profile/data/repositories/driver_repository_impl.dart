@@ -25,6 +25,9 @@ class DriverRepositoryImpl implements DriverRepository {
       _driver.setInstantBookingDefault(value);
 
   @override
+  FutureResult<DriverProfile> startProTrial() => _driver.startProTrial();
+
+  @override
   FutureResult<DriverProfile> uploadDocument({
     required DocumentType type,
     required UploadFile file,

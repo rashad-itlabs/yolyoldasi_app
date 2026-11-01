@@ -26,6 +26,11 @@ class DriverApiService {
         parse: DriverProfileModel.fromJson,
       );
 
+  /// `POST /driver/pro/trial` — starts the one-off free PRO trial. Answers
+  /// with the whole driver profile, so the new state lands in one read.
+  FutureResult<DriverProfile> startProTrial() =>
+      _client.post(Api.driverProTrial, parse: DriverProfileModel.fromJson);
+
   /// `POST /driver/documents` — multipart, jpg/jpeg/png/pdf, ≤8 MB.
   ///
   /// Re-uploading replaces the stored document and sends it back to `pending`,

@@ -24,6 +24,7 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
     on<DriverProfileRequested>(_onRequested);
     on<DriverDocumentUploaded>(_onDocumentUploaded);
     on<DriverInstantBookingDefaultChanged>(_onInstantBookingDefaultChanged);
+    on<DriverProTrialStarted>(_onProTrialStarted);
     on<DriverProfileFailureCleared>(_onFailureCleared);
   }
 
@@ -164,6 +165,41 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
     }
   }
 
+  Future<void> _onProTrialStarted(
+    DriverProTrialStarted event,
+    Emitter<DriverProfileState> emit,
+  ) async {
+    if (state.proTrialStatus.isInProgress) return;
+
+    emit(
+      state.copyWith(
+        proTrialStatus: ActionStatus.inProgress,
+        failure: () => null,
+      ),
+    );
+
+    // Not optimistic: starting PRO re-orders the driver's rides on the server,
+    // and a badge that appears and then disappears again is worse than a
+    // second of spinner.
+    final result = await _drivers.startProTrial();
+    switch (result) {
+      case Ok(:final value):
+        emit(
+          state.copyWith(
+            profile: () => value,
+            proTrialStatus: ActionStatus.success,
+          ),
+        );
+      case Err(:final failure):
+        emit(
+          state.copyWith(
+            proTrialStatus: ActionStatus.failure,
+            failure: () => failure,
+          ),
+        );
+    }
+  }
+
   void _onFailureCleared(
     DriverProfileFailureCleared event,
     Emitter<DriverProfileState> emit,
@@ -173,6 +209,7 @@ class DriverProfileBloc extends Bloc<DriverProfileEvent, DriverProfileState> {
         failure: () => null,
         uploadStatus: ActionStatus.idle,
         uploadingType: () => null,
+        proTrialStatus: ActionStatus.idle,
       ),
     );
   }

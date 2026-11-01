@@ -12,6 +12,10 @@ abstract interface class DriverRepository {
   /// `PUT /driver/profile` — the default `instant_booking` for new rides.
   FutureResult<DriverProfile> setInstantBookingDefault(bool value);
 
+  /// `POST /driver/pro/trial` — the one-off free PRO trial. Refused (409)
+  /// once used, and before the driver's documents are approved.
+  FutureResult<DriverProfile> startProTrial();
+
   /// `POST /driver/documents`, then a re-read of the profile so the caller gets
   /// the recomputed aggregate status back in one step.
   FutureResult<DriverProfile> uploadDocument({

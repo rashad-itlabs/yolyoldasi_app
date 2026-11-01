@@ -48,6 +48,11 @@ class DriverInstantBookingDefaultChanged extends DriverProfileEvent {
   List<Object?> get props => [value];
 }
 
+/// `POST /driver/pro/trial` — the driver taps "start the free trial".
+class DriverProTrialStarted extends DriverProfileEvent {
+  const DriverProTrialStarted();
+}
+
 class DriverProfileFailureCleared extends DriverProfileEvent {
   const DriverProfileFailureCleared();
 }

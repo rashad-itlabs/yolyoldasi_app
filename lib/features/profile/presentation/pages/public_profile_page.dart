@@ -10,6 +10,7 @@ import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
+import '../../../../core/widgets/pro_badge.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../bookings/domain/entities/booking.dart';
@@ -148,6 +149,7 @@ class _PublicProfileView extends StatelessWidget {
                       runSpacing: Gap.sm,
                       alignment: WrapAlignment.center,
                       children: [
+                        if (user.showsProBadge) const ProBadge(large: true),
                         if (user.hasDriverProfile)
                           StatusChip(
                             // "Sürücü", not "Sürücü rejimi": a mode is

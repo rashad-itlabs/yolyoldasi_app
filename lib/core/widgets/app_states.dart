@@ -15,6 +15,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.icon = Icons.inbox_rounded,
+    this.image,
     this.actionLabel,
     this.onAction,
     this.compact = false,
@@ -23,6 +24,10 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String? message;
   final IconData icon;
+
+  /// Asset path of a black silhouette on transparency, drawn in place of
+  /// [icon] and tinted the same way.
+  final String? image;
   final String? actionLabel;
   final VoidCallback? onAction;
   final bool compact;
@@ -41,17 +46,25 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: compact ? 64 : 88,
+              width: compact ? 64 : 68,
               height: compact ? 64 : 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: context.colors.primaryContainer.withValues(alpha: 0.55),
+                // color: context.colors.primaryContainer.withValues(alpha: 0.55),
               ),
-              child: Icon(
-                icon,
-                size: compact ? 30 : 40,
-                color: context.colors.primary,
-              ),
+              // The image is a notch smaller: its glyph runs to the edge of
+              // the canvas, where a Material icon keeps a margin inside its box.
+              child: image != null
+                  ? ImageIcon(
+                      AssetImage(image!),
+                      size: compact ? 28 : 36,
+                      color: context.colors.primary,
+                    )
+                  : Icon(
+                      icon,
+                      size: compact ? 30 : 40,
+                      color: context.colors.primary,
+                    ),
             ),
             VGap.xl,
             Text(

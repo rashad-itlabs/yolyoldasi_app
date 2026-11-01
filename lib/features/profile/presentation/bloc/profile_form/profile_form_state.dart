@@ -8,6 +8,7 @@ class ProfileFormState extends Equatable {
     this.birthYear,
     this.city,
     this.photoUrl,
+    this.pendingPhoto,
     this.status = ActionStatus.idle,
     this.photoStatus = ActionStatus.idle,
     this.savedUser,
@@ -24,6 +25,11 @@ class ProfileFormState extends Equatable {
   /// Kept separate from the form fields: the photo is saved by its own
   /// endpoint the moment it is picked, so it is never part of the PATCH.
   final String? photoUrl;
+
+  /// The photo being uploaded right now, shown in place of [photoUrl] until
+  /// the server has it — the user sees what they picked the moment they pick
+  /// it, not after the upload. Dropped on success and on failure alike.
+  final Uint8List? pendingPhoto;
 
   final ActionStatus status;
   final ActionStatus photoStatus;
@@ -79,6 +85,7 @@ class ProfileFormState extends Equatable {
     int? Function()? birthYear,
     City? Function()? city,
     String? Function()? photoUrl,
+    Uint8List? Function()? pendingPhoto,
     ActionStatus? status,
     ActionStatus? photoStatus,
     AppUser? Function()? savedUser,
@@ -92,6 +99,7 @@ class ProfileFormState extends Equatable {
       birthYear: birthYear != null ? birthYear() : this.birthYear,
       city: city != null ? city() : this.city,
       photoUrl: photoUrl != null ? photoUrl() : this.photoUrl,
+      pendingPhoto: pendingPhoto != null ? pendingPhoto() : this.pendingPhoto,
       status: status ?? this.status,
       photoStatus: photoStatus ?? this.photoStatus,
       savedUser: savedUser != null ? savedUser() : this.savedUser,
@@ -120,6 +128,7 @@ class ProfileFormState extends Equatable {
     birthYear,
     city,
     photoUrl,
+    pendingPhoto,
     status,
     photoStatus,
     savedUser,

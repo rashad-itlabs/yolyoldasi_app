@@ -661,4 +661,26 @@ const Map<String, String> kStringsEn = {
   'countryCodeTitle': 'Country code',
   'countrySearchHint': 'Search country or code',
   'countryNotFound': 'No such country',
+
+  // PRO tier for drivers
+  'proTagline': 'Get your rides in front of more passengers',
+  'proBoostTitle': 'First in search',
+  'proBoostBody':
+      'All your rides show at the very top of search results — passengers see you first.',
+  'proBadgeTitle': 'Gold PRO badge',
+  'proBadgeBody':
+      'A PRO badge next to your name: on your rides, the ride page and your profile. A trust signal for passengers.',
+  'proPreviewCaption': 'This is how passengers will see you',
+  'proTrialNote':
+      'No payment needed. PRO switches itself off when the period ends.',
+  'proActiveTitle': 'PRO is active',
+  'proExpiredTitle': 'Your free trial has ended',
+  'proExpiredBody':
+      'Paid PRO is coming soon. We will let you know when it is ready.',
+  'proLockedBody':
+      'PRO is for drivers with approved documents. You can start the trial once yours are approved.',
+  'proToDocuments': 'Go to documents',
+  'proCardTitle': 'Stand out with PRO',
+  'proActivated': 'PRO is on! Your rides are now first in search.',
+  'proBoostedBanner': 'Boosted in search',
 };

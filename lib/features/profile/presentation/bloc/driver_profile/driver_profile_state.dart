@@ -6,6 +6,7 @@ class DriverProfileState extends Equatable {
     this.profile,
     this.uploadingType,
     this.uploadStatus = ActionStatus.idle,
+    this.proTrialStatus = ActionStatus.idle,
     this.failure,
   });
 
@@ -19,6 +20,10 @@ class DriverProfileState extends Equatable {
   /// Which document is being uploaded, so only that row shows a spinner.
   final DocumentType? uploadingType;
   final ActionStatus uploadStatus;
+
+  /// The free PRO trial being started — its own status, so the PRO screen's
+  /// button spins without the documents list thinking an upload is running.
+  final ActionStatus proTrialStatus;
 
   final Failure? failure;
 
@@ -34,6 +39,7 @@ class DriverProfileState extends Equatable {
     DriverProfile? Function()? profile,
     DocumentType? Function()? uploadingType,
     ActionStatus? uploadStatus,
+    ActionStatus? proTrialStatus,
     Failure? Function()? failure,
   }) {
     return DriverProfileState(
@@ -43,6 +49,7 @@ class DriverProfileState extends Equatable {
           ? uploadingType()
           : this.uploadingType,
       uploadStatus: uploadStatus ?? this.uploadStatus,
+      proTrialStatus: proTrialStatus ?? this.proTrialStatus,
       failure: failure != null ? failure() : this.failure,
     );
   }
@@ -53,6 +60,7 @@ class DriverProfileState extends Equatable {
     profile,
     uploadingType,
     uploadStatus,
+    proTrialStatus,
     failure,
   ];
 }

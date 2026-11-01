@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -94,7 +96,11 @@ class ProfileFormBloc extends Bloc<ProfileFormEvent, ProfileFormState> {
     }
 
     emit(
-      state.copyWith(photoStatus: ActionStatus.inProgress, failure: () => null),
+      state.copyWith(
+        photoStatus: ActionStatus.inProgress,
+        pendingPhoto: () => event.photo.bytes,
+        failure: () => null,
+      ),
     );
 
     final result = await _users.uploadPhoto(event.photo);
@@ -106,6 +112,7 @@ class ProfileFormBloc extends Bloc<ProfileFormEvent, ProfileFormState> {
           state.copyWith(
             photoStatus: ActionStatus.success,
             photoUrl: () => value.photoUrl,
+            pendingPhoto: () => null,
             savedUser: () => value,
             original: () => value,
           ),
@@ -114,6 +121,7 @@ class ProfileFormBloc extends Bloc<ProfileFormEvent, ProfileFormState> {
         emit(
           state.copyWith(
             photoStatus: ActionStatus.failure,
+            pendingPhoto: () => null,
             failure: () => failure,
           ),
         );

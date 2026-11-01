@@ -63,7 +63,10 @@ void main() {
     });
 
     test('an unknown status is read as open rather than dropped', () {
-      final request = RideRequestModel.fromJson({...json, 'status': 'brand_new'});
+      final request = RideRequestModel.fromJson({
+        ...json,
+        'status': 'brand_new',
+      });
       expect(request.status, RideRequestStatus.open);
     });
 
@@ -91,7 +94,11 @@ void main() {
       );
 
       expect(body['wanted_date'], '2026-09-05');
-      expect(body.containsKey('note'), isFalse, reason: 'empty note is omitted');
+      expect(
+        body.containsKey('note'),
+        isFalse,
+        reason: 'empty note is omitted',
+      );
     });
 
     test('a draft needs two different cities and a date', () {
@@ -186,6 +193,59 @@ void main() {
       final body = RideModel.createBody(const RideDraftStub().draft);
       expect(body.containsKey('repeat_weeks'), isFalse);
     });
+
+    // Reported: the time picked when publishing came back different. A local
+    // DateTime prints with no offset, the UTC server took "08:00" as 08:00
+    // UTC, and Baku saw 12:00.
+    group('departure times go out as one unambiguous instant', () {
+      final picked = DateTime(2030, 9, 20, 8); // 08:00 on the device's clock
+
+      void expectInstant(Object? sent) {
+        expect(sent, isA<String>());
+        final value = sent! as String;
+        expect(value, endsWith('Z'), reason: 'offset must be explicit');
+        expect(DateTime.parse(value).isAtSameMomentAs(picked), isTrue);
+      }
+
+      test('when publishing', () {
+        expectInstant(
+          RideModel.createBody(const RideDraftStub().draft)['departure_at'],
+        );
+      });
+
+      test('when repeating', () {
+        expectInstant(
+          RideModel.repeatBody(departureAt: picked)['departure_at'],
+        );
+      });
+
+      test('when editing', () {
+        expectInstant(
+          RideModel.updateBody(const RideDraftStub().draft)['departure_at'],
+        );
+      });
+
+      test(
+        'and the server\'s UTC answer shows as the time that was picked',
+        () {
+          final sent =
+              RideModel.createBody(const RideDraftStub().draft)['departure_at']!
+                  as String;
+          // What the API echoes back: the same instant, written in UTC.
+          final echoed = DateTime.parse(sent).toUtc().toIso8601String();
+          final shown = RideModel.fromJson({
+            'id': 1,
+            'driver': {'id': 2},
+            'from_city': {'id': 1, 'name': 'Bakı'},
+            'to_city': {'id': 9, 'name': 'Qəbələ'},
+            'departure_at': echoed,
+          }).departureAt;
+
+          expect(shown.hour, 8);
+          expect(shown.minute, 0);
+        },
+      );
+    });
   });
 
   group('UserStatsModel', () {
@@ -221,7 +281,10 @@ void main() {
 
   group('PublicUserModel — verification', () {
     test('an absent is_verified is unknown, not false', () {
-      final user = PublicUserModel.fromJson({'id': 42, 'full_name': 'Rəşad M.'});
+      final user = PublicUserModel.fromJson({
+        'id': 42,
+        'full_name': 'Rəşad M.',
+      });
 
       // The difference matters: rendering unknown as unverified would strip
       // the badge off an approved driver on every screen that does not load

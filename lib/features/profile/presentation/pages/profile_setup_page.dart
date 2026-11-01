@@ -73,7 +73,10 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
 
   Future<void> _pickPhoto() async {
     final bloc = context.read<ProfileFormBloc>();
-    final photo = await PhotoPicker.pick(context);
+    // An avatar is shown at most ~100 points wide; 600 px is crisp on any
+    // screen and a fraction of the 1600 px documents need (PNGs are not
+    // re-compressed, so the size cap is what keeps them small).
+    final photo = await PhotoPicker.pick(context, maxDimension: 600);
     if (photo == null) return;
 
     bloc.add(
@@ -165,6 +168,7 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                       AppAvatar(
                         name: state.fullName,
                         photoUrl: state.photoUrl,
+                        previewBytes: state.pendingPhoto,
                         size: Sizes.avatarXl,
                         onTap: state.photoStatus.isBusy ? null : _pickPhoto,
                       ),

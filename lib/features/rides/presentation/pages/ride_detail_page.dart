@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
+import '../../../../core/widgets/pro_badge.dart';
 import '../../../../core/widgets/route_timeline.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
@@ -326,9 +327,21 @@ class _Body extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          fmt.shortName(ride.driver.fullName),
-                          style: context.text.titleMedium,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                fmt.shortName(ride.driver.fullName),
+                                style: context.text.titleMedium,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (ride.driver.showsProBadge) ...[
+                              HGap.sm,
+                              const ProBadge(large: true),
+                            ],
+                          ],
                         ),
                         VGap.xs,
                         RatingLabel(

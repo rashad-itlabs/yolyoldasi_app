@@ -35,6 +35,7 @@ abstract final class Api {
   // ------------------------------------------------------------------- driver
   static const driverProfile = '/driver/profile';
   static const driverDocuments = '/driver/documents';
+  static const driverProTrial = '/driver/pro/trial';
 
   // ----------------------------------------------------------------- vehicles
   static const vehicles = '/vehicles';

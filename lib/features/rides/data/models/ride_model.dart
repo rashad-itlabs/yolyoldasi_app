@@ -41,13 +41,25 @@ abstract final class RideModel {
     );
   }
 
+  /// A moment in time, with its zone spelled out (`…Z`).
+  ///
+  /// The picker hands back a local `DateTime`, and a local `DateTime` prints
+  /// without an offset ("2026-10-18T09:00:00.000"). The server runs in UTC, so
+  /// it read that as 09:00 UTC and sent back `09:00+00:00` — which this app
+  /// then showed as 13:00 in Baku. Converting first makes the string mean one
+  /// instant everywhere.
+  static String _instant(DateTime time) => time.toUtc().toIso8601String();
+
+  static String? _instantOrNull(DateTime? time) =>
+      time == null ? null : _instant(time);
+
   /// Body for `POST /rides`. Every required field is asserted by [RideDraft],
   /// so this is only reached with a complete draft.
   static Json createBody(RideDraft draft) => {
     'vehicle_id': draft.vehicleId,
     'from_city_id': draft.fromCityId,
     'to_city_id': draft.toCityId,
-    'departure_at': draft.departureAt!.toIso8601String(),
+    'departure_at': _instant(draft.departureAt!),
     'total_seats': draft.totalSeats,
     'price_per_seat': draft.pricePerSeat,
     'note': draft.note.trim(),
@@ -62,7 +74,7 @@ abstract final class RideModel {
 
   /// Body for `POST /rides/{id}/repeat` — the same run, a new date.
   static Json repeatBody({required DateTime departureAt, int weeks = 1}) => {
-    'departure_at': departureAt.toIso8601String(),
+    'departure_at': _instant(departureAt),
     if (weeks > 1) 'repeat_weeks': weeks,
   };
 
@@ -71,7 +83,7 @@ abstract final class RideModel {
   /// Route and vehicle are missing on purpose: API.md §9 lists exactly which
   /// fields an edit may touch, and those two are not among them.
   static Json updateBody(RideDraft draft, {RideStatus? status}) => {
-    'departure_at': ?draft.departureAt?.toIso8601String(),
+    'departure_at': ?_instantOrNull(draft.departureAt),
     'total_seats': draft.totalSeats,
     'price_per_seat': draft.pricePerSeat,
     'note': draft.note.trim(),

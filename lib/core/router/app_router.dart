@@ -17,6 +17,7 @@ import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/chat/presentation/pages/conversations_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import '../../features/profile/presentation/pages/documents_page.dart';
+import '../../features/profile/presentation/pages/pro_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_setup_page.dart';
 import '../../features/profile/presentation/pages/public_profile_page.dart';
@@ -182,6 +183,11 @@ GoRouter buildRouter({
                     path: Routes.referralPath,
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (_, _) => const ReferralPage(),
+                  ),
+                  GoRoute(
+                    path: Routes.proPath,
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (_, _) => const ProPage(),
                   ),
                 ],
               ),

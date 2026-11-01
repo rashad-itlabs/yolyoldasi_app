@@ -70,6 +70,7 @@ abstract final class PublicUserModel {
       // Absent, not false, when the server did not load the driver profile —
       // see the field's own note on `PublicUser`.
       isVerified: json.flagOrNull('is_verified'),
+      isPro: json.flagOrNull('is_pro'),
       stats: UserStatsModel.fromJson(json.child('stats')),
     );
   }

@@ -554,6 +554,33 @@ class AppStrings {
     _ => '$count rəy',
   };
 
+  /// "30 gün pulsuz başla" — the PRO trial button.
+  String proStartTrial(int days) => switch (languageCode) {
+    'ru' => '$days ${_ruPlural(days, 'день', 'дня', 'дней')} бесплатно',
+    'en' => 'Start $days-day free trial',
+    _ => '$days gün pulsuz başla',
+  };
+
+  /// The PRO offer on the profile tab.
+  String proCardBody(int days) => switch (languageCode) {
+    'ru' =>
+      '$days ${_ruPlural(days, 'день', 'дня', 'дней')} бесплатно: ваши '
+          'объявления первые в поиске, значок PRO рядом с именем.',
+    'en' =>
+      '$days days free: your rides first in search, a PRO badge by your name.',
+    _ =>
+      '$days gün pulsuz: elanların axtarışda birinci, adının yanında PRO '
+          'nişanı.',
+  };
+
+  /// "15 noyabr tarixinədək" — [date] is already formatted. Always read
+  /// after "PRO aktivdir", so it does not repeat it.
+  String proActiveUntil(String date) => switch (languageCode) {
+    'ru' => 'до $date',
+    'en' => 'until $date',
+    _ => '$date tarixinədək',
+  };
+
   String tripsCount(int count) => switch (languageCode) {
     'ru' => '$count ${_ruPlural(count, 'поездка', 'поездки', 'поездок')}',
     'en' => count == 1 ? '1 trip' : '$count trips',
@@ -764,6 +791,23 @@ class AppStrings {
   String get referralActive => _get('referralActive');
   String get referralBoostActive => _get('referralBoostActive');
   String get referralBoostUntil => _get('referralBoostUntil');
+
+  // PRO tier for drivers
+  String get proTagline => _get('proTagline');
+  String get proBoostTitle => _get('proBoostTitle');
+  String get proBoostBody => _get('proBoostBody');
+  String get proBadgeTitle => _get('proBadgeTitle');
+  String get proBadgeBody => _get('proBadgeBody');
+  String get proPreviewCaption => _get('proPreviewCaption');
+  String get proTrialNote => _get('proTrialNote');
+  String get proActiveTitle => _get('proActiveTitle');
+  String get proExpiredTitle => _get('proExpiredTitle');
+  String get proExpiredBody => _get('proExpiredBody');
+  String get proLockedBody => _get('proLockedBody');
+  String get proToDocuments => _get('proToDocuments');
+  String get proCardTitle => _get('proCardTitle');
+  String get proActivated => _get('proActivated');
+  String get proBoostedBanner => _get('proBoostedBanner');
   String get referralShare => _get('referralShare');
   String get referralShareText => _get('referralShareText');
   String get referralCodeHint => _get('referralCodeHint');

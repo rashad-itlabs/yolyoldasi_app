@@ -1,5 +1,7 @@
 import '../../../../core/error/result.dart';
+import '../../../../core/network/media_url.dart';
 import '../../../../core/network/upload_file.dart';
+import '../../../../core/services/image_cache_seeder.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/entities/referral.dart';
 import '../../domain/entities/user_enums.dart';
@@ -12,11 +14,14 @@ class UserRepositoryImpl implements UserRepository {
   const UserRepositoryImpl({
     required UserApiService users,
     required DeviceTokenApiService deviceTokens,
+    ImageCacheSeeder? imageCache,
   }) : _users = users,
-       _deviceTokens = deviceTokens;
+       _deviceTokens = deviceTokens,
+       _imageCache = imageCache ?? const CachedImageSeeder();
 
   final UserApiService _users;
   final DeviceTokenApiService _deviceTokens;
+  final ImageCacheSeeder _imageCache;
 
   @override
   FutureResult<AppUser> me() => _users.me();
@@ -49,8 +54,32 @@ class UserRepositoryImpl implements UserRepository {
       _users.setActiveMode(mode);
 
   @override
-  FutureResult<AppUser> uploadPhoto(UploadFile photo) =>
-      _users.uploadPhoto(photo);
+  FutureResult<AppUser> uploadPhoto(UploadFile photo) async {
+    final result = await _users.uploadPhoto(photo);
+
+    // The phone already has these bytes; the server only gave them a new URL.
+    // Seeded before returning, so the first avatar that rebuilds with the new
+    // URL finds it on disk instead of downloading it back.
+    final url = result.valueOrNull?.photoUrl;
+    if (url != null && url.isNotEmpty) {
+      try {
+        await _imageCache.seed(
+          MediaUrl.resolve(url),
+          photo.bytes,
+          fileExtension: _extensionOf(photo.fileName),
+        );
+      } catch (_) {
+        // A cache that cannot be written only costs a download; the upload
+        // itself has succeeded and must be reported as such.
+      }
+    }
+    return result;
+  }
+
+  static String _extensionOf(String fileName) {
+    final dot = fileName.lastIndexOf('.');
+    return dot == -1 ? 'jpg' : fileName.substring(dot + 1).toLowerCase();
+  }
 
   @override
   FutureResult<ReferralSummary> referral() => _users.referral();

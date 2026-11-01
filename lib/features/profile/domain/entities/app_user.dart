@@ -263,6 +263,7 @@ class PublicUser extends Equatable {
     this.city,
     this.hasDriverProfile = false,
     this.isVerified,
+    this.isPro,
     this.stats = UserStats.empty,
   });
 
@@ -282,11 +283,17 @@ class PublicUser extends Equatable {
   /// driver on any screen that happens not to load the relation.
   final bool? isVerified;
 
+  /// A driver on the PRO tier (API.md §21). Same three states as
+  /// [isVerified], for the same reason.
+  final bool? isPro;
+
   final UserStats stats;
 
   /// The only question the badge asks. Unknown reads as no badge, which is
   /// right: a badge is a claim, and we only make it when the server said so.
   bool get showsVerifiedBadge => isVerified == true;
+
+  bool get showsProBadge => isPro == true;
 
   int? get age => birthYear == null ? null : DateTime.now().year - birthYear!;
 
@@ -308,6 +315,7 @@ class PublicUser extends Equatable {
     city,
     hasDriverProfile,
     isVerified,
+    isPro,
     stats,
   ];
 }

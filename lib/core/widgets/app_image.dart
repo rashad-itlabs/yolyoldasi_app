@@ -2,12 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../extensions/context_extensions.dart';
+import '../network/media_url.dart';
 
 /// Renders a remote image, or a placeholder while it loads or fails.
 ///
 /// Every avatar and document thumbnail goes through here, so the caching and
-/// fallback behaviour is decided once. The API returns absolute URLs
-/// (`https://.../storage/avatars/x.jpg`), so there is nothing to resolve.
+/// fallback behaviour is decided once.
 class AppImage extends StatelessWidget {
   const AppImage({
     super.key,
@@ -30,7 +30,7 @@ class AppImage extends StatelessWidget {
     if (source == null || source.isEmpty) return _fallback(context);
 
     return CachedNetworkImage(
-      imageUrl: source,
+      imageUrl: MediaUrl.resolve(source),
       width: width,
       height: height,
       fit: fit,

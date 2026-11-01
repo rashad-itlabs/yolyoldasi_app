@@ -60,6 +60,8 @@ abstract final class Routes {
   static const myReviewsPath = 'reviews';
   static const referral = '/profile/referral';
   static const referralPath = 'referral';
+  static const pro = '/profile/pro';
+  static const proPath = 'pro';
 
   // Reviews
   static String writeReview(int bookingId) => '/review/$bookingId';

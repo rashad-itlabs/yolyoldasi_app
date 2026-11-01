@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import 'pro_status.dart';
 import 'user_enums.dart';
 import 'vehicle.dart';
 
@@ -76,6 +77,7 @@ class DriverProfile extends Equatable {
     this.reviewedAt,
     this.rejectionReason,
     this.instantBookingDefault = false,
+    this.pro,
   });
 
   /// Derived by the server from the four documents (API.md §7): all approved →
@@ -98,6 +100,13 @@ class DriverProfile extends Equatable {
   /// Pre-fills `instant_booking` on new rides. Editing it does not touch rides
   /// already published (API.md §7).
   final bool instantBookingDefault;
+
+  /// `null` when the server says nothing about PRO — an API from before the
+  /// tier existed. The app then hides PRO altogether rather than offer a trial
+  /// it cannot start.
+  final ProStatus? pro;
+
+  bool get isPro => pro?.isActive ?? false;
 
   /// The state a user who has never started driver onboarding is in.
   static final DriverProfile initial = DriverProfile(
@@ -151,6 +160,7 @@ class DriverProfile extends Equatable {
     DateTime? Function()? reviewedAt,
     String? Function()? rejectionReason,
     bool? instantBookingDefault,
+    ProStatus? Function()? pro,
   }) {
     return DriverProfile(
       status: status ?? this.status,
@@ -163,6 +173,7 @@ class DriverProfile extends Equatable {
           : this.rejectionReason,
       instantBookingDefault:
           instantBookingDefault ?? this.instantBookingDefault,
+      pro: pro != null ? pro() : this.pro,
     );
   }
 
@@ -175,5 +186,6 @@ class DriverProfile extends Equatable {
     reviewedAt,
     rejectionReason,
     instantBookingDefault,
+    pro,
   ];
 }

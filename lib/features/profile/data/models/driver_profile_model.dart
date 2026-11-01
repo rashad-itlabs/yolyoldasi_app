@@ -1,6 +1,7 @@
 import '../../../../core/network/json_reader.dart';
 import '../../../../core/types.dart';
 import '../../domain/entities/driver_profile.dart';
+import '../../domain/entities/pro_status.dart';
 import '../../domain/entities/user_enums.dart';
 import 'vehicle_model.dart';
 
@@ -15,6 +16,19 @@ abstract final class DriverProfileModel {
       reviewedAt: json.dateOrNull('reviewed_at'),
       rejectionReason: json.strOrNull('rejection_reason'),
       instantBookingDefault: json.flag('instant_booking_default'),
+      pro: _pro(json.childOrNull('pro')),
+    );
+  }
+
+  /// Absent on an API from before PRO — kept `null` rather than defaulted, so
+  /// the app can tell "no PRO here yet" from "PRO, but not active".
+  static ProStatus? _pro(Json? json) {
+    if (json == null) return null;
+    return ProStatus(
+      isActive: json.flag('active'),
+      until: json.dateOrNull('until'),
+      trialAvailable: json.flag('trial_available'),
+      trialDays: json.integer('trial_days', 30),
     );
   }
 

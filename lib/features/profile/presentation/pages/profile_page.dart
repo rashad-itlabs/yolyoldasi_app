@@ -6,6 +6,7 @@ import '../../../../core/di/app_dependencies.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/services/analytics.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/utils/phone_number.dart';
@@ -14,8 +15,10 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_states.dart';
+import '../../../../core/widgets/pro_badge.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
+import '../../domain/entities/pro_status.dart';
 import '../../domain/entities/user_enums.dart';
 import '../bloc/driver_profile/driver_profile_bloc.dart';
 import '../widgets/profile_tile.dart';
@@ -154,7 +157,37 @@ class ProfilePage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(user.fullName, style: context.text.titleLarge),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    user.fullName,
+                                    style: context.text.titleLarge,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                // In driver mode only: PRO is a driver tier,
+                                // and the badge is what passengers see.
+                                if (mode.isDriver)
+                                  BlocSelector<
+                                    DriverProfileBloc,
+                                    DriverProfileState,
+                                    bool
+                                  >(
+                                    selector: (state) =>
+                                        state.profile?.isPro ?? false,
+                                    builder: (context, isPro) => isPro
+                                        ? const Padding(
+                                            padding: EdgeInsets.only(
+                                              left: Gap.sm,
+                                            ),
+                                            child: ProBadge(large: true),
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                              ],
+                            ),
                             VGap.xs,
                             Text(
                               PhoneNumbers.format(user.phone),
@@ -224,6 +257,9 @@ class ProfilePage extends StatelessWidget {
                     onTap: () => _switchMode(context, UserMode.driver),
                   ),
                 ],
+
+                // ----------------------------------------------------- pro
+                if (mode.isDriver) const _ProCard(),
 
                 // -------------------------------------------------- driver
                 if (showsDriverSection) ...[VGap.xxl, const _DriverSection()],
@@ -413,6 +449,123 @@ class _BecomeDriverCard extends StatelessWidget {
           ),
           Icon(Icons.chevron_right_rounded, color: palette.textTertiary),
         ],
+      ),
+    );
+  }
+}
+
+/// The way to PRO from the profile tab, in PRO gold.
+///
+/// Says what PRO does in one line rather than "upgrade": the driver should
+/// know what they would get before they tap. Hidden when the server says
+/// nothing about PRO (an API from before the tier), and before the driver
+/// profile has loaded, so it never offers a trial it cannot start.
+class _ProCard extends StatelessWidget {
+  const _ProCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final pro = context.select<DriverProfileBloc, ProStatus?>(
+      (bloc) => bloc.state.profile?.pro,
+    );
+    if (pro == null) return const SizedBox.shrink();
+
+    final until = pro.until;
+    final (title, body) = switch (pro) {
+      ProStatus(isActive: true) => (
+        l10n.proActiveTitle,
+        until == null
+            ? l10n.proBoostTitle
+            : l10n.proActiveUntil(context.fmt.dayMonth(until)),
+      ),
+      ProStatus(trialAvailable: true) => (
+        l10n.proCardTitle,
+        l10n.proCardBody(pro.trialDays),
+      ),
+      _ => (l10n.proExpiredTitle, l10n.proExpiredBody),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.lg),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: Radii.lgAll,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: ProColors.heroGradient,
+            ),
+            borderRadius: Radii.lgAll,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.amber500.withValues(alpha: 0.3),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: () => context.push(Routes.pro),
+            borderRadius: Radii.lgAll,
+            child: Padding(
+              padding: const EdgeInsets.all(Gap.lg),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.35),
+                    ),
+                    child: Icon(
+                      pro.isActive
+                          ? Icons.workspace_premium_rounded
+                          : Icons.rocket_launch_rounded,
+                      color: ProColors.onGold,
+                    ),
+                  ),
+                  HGap.lg,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                title,
+                                style: context.text.titleSmall?.copyWith(
+                                  color: ProColors.onGold,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            if (pro.isActive) ...[HGap.sm, const ProBadge()],
+                          ],
+                        ),
+                        VGap.xs,
+                        Text(
+                          body,
+                          style: context.text.bodySmall?.copyWith(
+                            color: ProColors.onGold.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: ProColors.onGold,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

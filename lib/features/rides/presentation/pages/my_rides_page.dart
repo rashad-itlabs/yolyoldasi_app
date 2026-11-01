@@ -44,9 +44,6 @@ class _MyRidesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final canPublish = context.select<DriverProfileBloc, bool>(
-      (bloc) => bloc.state.canPublishRides,
-    );
     final unread = context.select<BadgesBloc, int>(
       (bloc) => bloc.state.unreadNotifications,
     );
@@ -81,13 +78,8 @@ class _MyRidesView extends StatelessWidget {
             ),
           ),
         ),
-        floatingActionButton: canPublish
-            ? FloatingActionButton.extended(
-                onPressed: () => context.push(Routes.publishRide),
-                icon: const Icon(Icons.add_rounded),
-                label: Text(l10n.publishRideShort),
-              )
-            : null,
+        // No publish button here: the dock's raised "+" is one tap away from
+        // every tab, and a second one right above it would only compete.
         body: BlocListener<MyRidesBloc, MyRidesState>(
           listenWhen: (previous, current) =>
               previous.actionStatus != current.actionStatus,
@@ -229,7 +221,7 @@ class _RidesList extends StatelessWidget {
           // here would only lead to the locked form.
           final showPublish = !includePast && canPublish;
           return EmptyState(
-            icon: Icons.directions_car_outlined,
+            image: 'assets/icon/traveling.png',
             title: l10n.noRidesYet,
             message: includePast ? null : l10n.noRidesYetBody,
             actionLabel: showPublish ? l10n.publishRideShort : null,

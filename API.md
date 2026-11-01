@@ -52,7 +52,7 @@ JSON yerinə HTML redirect qaytarır.
 | 401 | token yoxdur / etibarsızdır | `{"message":"..."}` |
 | 403 | resurs başqasınındır, hesab bloklanıb | `{"message":"..."}` |
 | 404 | tapılmadı (silinmiş istifadəçi daxil) | `{"message":"..."}` |
-| 409 | təkrar əməliyyat (ikinci dəfə rezervasiya/rəy) | `{"message":"..."}` |
+| 409 | təkrar əməliyyat (ikinci dəfə rezervasiya/rəy/PRO sınağı) | `{"message":"..."}` |
 | 422 | validasiya və ya biznes qaydası | `{"message":"...","errors":{"field":["..."]}}` |
 | 429 | limit aşıldı | `{"message":"Too Many Attempts."}` |
 
@@ -61,6 +61,13 @@ JSON yerinə HTML redirect qaytarır.
 > Klient hər iki halı idarə etməlidir.
 
 **Tarixlər** — bütün tarix sahələri ISO 8601 (`2026-09-15T14:30:00+04:00`).
+
+Server vaxtı **UTC**-də saxlayır və cavabda UTC ilə qaytarır
+(`2026-10-18T05:00:00+00:00`) — klient onu yerli saata çevirib göstərir.
+Klient vaxt göndərəndə **ofseti mütləq yazmalıdır** (`…Z` və ya `…+04:00`).
+Ofsetsiz vaxt (`2026-10-18T09:00:00`) Bakı saatı (`Asia/Baku`) sayılır — bu,
+tətbiqin köhnə versiyaları üçün saxlanılıb, yeni klient ona güvənməməlidir.
+Yalnız tarix olan sahələr (`date`, `wanted_date`) Bakı təqvim günüdür.
 Yalnız `searched_date` `YYYY-MM-DD` formatındadır.
 
 ---
@@ -341,12 +348,15 @@ Nadir dəyişir, klientdə keşlə.
       "uploaded_at": null, "rejection_reason": null, "needs_back_side": true },
     { "type": "vehicle_registration", "status": "not_uploaded", "...": "..." },
     { "type": "insurance", "status": "not_uploaded", "...": "..." }
-  ]
+  ],
+  "pro": { "active": false, "until": null, "trial_available": true, "trial_days": 30 }
 }}
 ```
 
 `documents` **həmişə dörd element** qaytarır — yüklənməyənlər `not_uploaded`.
 Klient siyahını olduğu kimi göstərə bilər.
+
+`pro` — sürücü PRO-su, bax §25.
 
 Profilin ümumi `status`-u sənədlərdən törəyir:
 hamısı `approved` → `approved` · biri `rejected` → `rejected` ·
@@ -1048,7 +1058,7 @@ Hər sətirdə `/demand` sahələri + `from_city`, `to_city`, `score`.
 | Sahə | Məna |
 |---|---|
 | `women_only` | yalnız qadın sərnişin qəbul edən səfər |
-| `is_boosted` | dəvət mükafatı ilə axtarışın başındadır |
+| `is_boosted` | dəvət mükafatı və ya PRO ilə axtarışın başındadır (§25) |
 | `share_url` | `https://<domen>/r/{id}` — ictimai səhifə |
 
 `POST /rides` və `PUT /rides/{id}` `women_only` qəbul edir. **Yalnız
@@ -1093,7 +1103,7 @@ gəlir; `data` birinci yaradılmış səfərdir.
 
 `is_verified` qısa profildə gəlir — sənədləri təsdiqlənmiş sürücü. Əlaqə
 yüklənməyibsə **açar ümumiyyətlə olmur** (§16.5): "bilinmir" ilə
-"təsdiqlənməyib" fərqli şeylərdir.
+"təsdiqlənməyib" fərqli şeylərdir. `is_pro` (§25) eyni qayda ilə, eyni yerlərdə gəlir.
 
 ### Təkrar bron (409 qaydası dəyişdi)
 
@@ -1178,3 +1188,84 @@ klient sessiyanı ikinci sorğu etmədən yeniləsin.
 
 Rejim tətbiqdə profil ekranından da dəyişdirilir — əvvəl yalnız giriş
 ekranında seçilirdi və dəyişmək üçün çıxıb yenidən OTP ilə girmək lazım idi.
+
+---
+
+## 25. Sürücü PRO
+
+PRO sürücü üçündür və bu mərhələdə iki şey verir:
+
+1. **Boost** — sürücünün elanları axtarışda başda çıxır (`is_boosted: true`);
+2. **PRO nişanı** — qısa profildə `is_pro`.
+
+Əsas funksiyalar (elan, bron, yazışma, rəy) hamı üçün pulsuz və komissiyasız
+qalır. Ödəniş **yoxdur**: PRO hələlik yalnız iki yolla aktivləşir — sürücünün
+özünün bir dəfə başlatdığı **30 günlük pulsuz sınaq** və admin panelindən
+əl ilə vermə/ləğv. Pullu abunə sonrakı mərhələdir.
+
+### `GET /driver/profile` — `pro` bloku
+
+```json
+"pro": {
+  "active": true,
+  "until": "2026-11-16T12:00:00+04:00",
+  "trial_available": false,
+  "trial_days": 30
+}
+```
+
+| Sahə | Məna |
+|---|---|
+| `active` | PRO hazırda aktivdir |
+| `until` | bitmə vaxtı — **yalnız `active: true` olanda**, əks halda `null` |
+| `trial_available` | pulsuz sınaq hələ istifadə olunmayıb |
+| `trial_days` | sınağın müddəti (gün) — mətndə sabit yazma, buradan götür |
+
+> `trial_available: true` sınağın **indi** başladıla biləcəyi demək deyil —
+> profilin `status`-u da `approved` olmalıdır. Düyməni hər ikisinə görə göstər.
+
+### POST `/driver/pro/trial`
+
+Gövdə yoxdur. Uğurda `200` və **`GET /driver/profile` ilə eyni gövdə**
+(yenilənmiş `pro` bloku ilə) — ekranı ikinci sorğusuz yenilə.
+
+`until` = `max(indi, mövcud until) + 30 gün`. Sürücünün artıq verilmiş
+gələcək elanları da dərhal boost alır.
+
+| Kod | Nə vaxt | `message` |
+|---|---|---|
+| `422` | `status = pending` | Sənədləriniz yoxlanılır. Təsdiqdən sonra PRO sınağını başlada biləcəksiniz. |
+| `422` | `status = rejected` | Sənədləriniz rədd edilib. Yenidən yükləyin. |
+| `422` | `status = not_uploaded` və ya sürücü profili yoxdur | PRO üçün əvvəlcə sürücü sənədlərinizi yükləyin. |
+| `409` | sınaq artıq istifadə olunub | Pulsuz PRO sınağından artıq istifadə etmisiniz. |
+
+Hər iki `422` biznes qaydasıdır — gövdədə yalnız `message` olur (§1).
+
+Sınaq hesab başına **bir dəfədir**. Admin PRO-nu ləğv etsə də sınaq yenidən
+açılmır.
+
+### Qısa profildə `is_pro`
+
+`is_verified` ilə eyni qayda: `driverProfile` yüklənibsə gəlir, yüklənməyibsə
+**açar ümumiyyətlə olmur** (§16.5) — "bilinmir" `false` deyil.
+
+| Gəlir | Gəlmir (açar yoxdur) |
+|---|---|
+| `GET /rides`, `GET /rides/{id}`, `POST /rides`, `PUT /rides/{id}`, `POST /rides/{id}/repeat` (`driver`) | `GET /conversations` → `other_user` |
+| `GET /bookings`, `GET /bookings/{id}`, `POST /rides/{id}/bookings` (`driver`) | rəy `author`, bildiriş `actor` |
+| tələb elanı cavabındakı `matches` (`driver`) | |
+| `GET /users/{id}` (ictimai profil) | |
+
+### Sıralama
+
+PRO sürücünün elanları dəvət mükafatı alan elanlarla eyni qaydada başda çıxır:
+əvvəl boost-lu elanlar, sonra seçilmiş `sort`. Bu `GET /rides` və tələb
+elanının `matches` siyahısına aiddir.
+
+Elanın boost-u sürücünün **ehtiyatı** ilə həmin elanın yola düşmə vaxtından
+kiçiyidir. Ehtiyat — dəvət mükafatı (`boost_until`) ilə PRO-dan hansı gec
+bitirsə; ikisi toplanmır.
+
+PRO başlayanda, uzadılanda və ya ləğv olunanda sürücünün gələcək `active` və
+`inactive` elanlarının boost-u dərhal yenidən hesablanır. Ləğvdən sonra dəvət
+mükafatı varsa, elanlarda o qalır.

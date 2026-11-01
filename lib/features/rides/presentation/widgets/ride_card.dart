@@ -4,6 +4,7 @@ import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/pro_badge.dart';
 import '../../../../core/widgets/route_timeline.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../cities/domain/entities/city.dart';
@@ -53,6 +54,12 @@ class RideCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The driver's own listing, while it is being shown first in search
+          // (PRO, or a referral reward): the one place the boost is visible
+          // to the person it works for. Passengers see the driver's PRO badge
+          // instead, further down.
+          if (!showDriver && ride.isBoosted) const _BoostedStrip(),
+
           // --------------------------------------------------------- header
           Padding(
             padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.md, Gap.lg, Gap.md),
@@ -151,6 +158,10 @@ class RideCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            if (ride.driver.showsProBadge) ...[
+                              HGap.sm,
+                              const ProBadge(),
+                            ],
                             HGap.sm,
                             RatingLabel(
                               rating: ride.driver.ratingFor(UserMode.driver),
@@ -280,6 +291,41 @@ class RideSummaryRow extends StatelessWidget {
         ),
         if (trailing != null) ...[HGap.md, trailing!],
       ],
+    );
+  }
+}
+
+class _BoostedStrip extends StatelessWidget {
+  const _BoostedStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: 6),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: ProColors.gradient),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.rocket_launch_rounded,
+            size: 14,
+            color: ProColors.onGold,
+          ),
+          HGap.sm,
+          Expanded(
+            child: Text(
+              context.l10n.proBoostedBanner,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.labelMedium?.copyWith(
+                color: ProColors.onGold,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

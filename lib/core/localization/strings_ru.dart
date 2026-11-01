@@ -662,4 +662,24 @@ const Map<String, String> kStringsRu = {
   'countryCodeTitle': 'Код страны',
   'countrySearchHint': 'Поиск страны или кода',
   'countryNotFound': 'Страна не найдена',
+
+  // PRO tier for drivers
+  'proTagline': 'Ваши объявления увидит больше пассажиров',
+  'proBoostTitle': 'Первым в поиске',
+  'proBoostBody':
+      'Все ваши объявления показываются в самом верху результатов поиска — пассажир видит вас первым.',
+  'proBadgeTitle': 'Золотой значок PRO',
+  'proBadgeBody':
+      'Значок PRO рядом с именем: в объявлениях, на странице поездки и в профиле. Сигнал доверия для пассажира.',
+  'proPreviewCaption': 'Так вас увидят пассажиры',
+  'proTrialNote': 'Оплата не нужна. Когда срок закончится, PRO отключится сам.',
+  'proActiveTitle': 'PRO активен',
+  'proExpiredTitle': 'Пробный период закончился',
+  'proExpiredBody': 'Платный PRO скоро появится. Сообщим, когда будет готово.',
+  'proLockedBody':
+      'PRO — для водителей с подтверждёнными документами. Пробный период можно начать после проверки документов.',
+  'proToDocuments': 'К документам',
+  'proCardTitle': 'Выходите вперёд с PRO',
+  'proActivated': 'PRO включён! Ваши объявления уже первые в поиске.',
+  'proBoostedBanner': 'Поднято в поиске',
 };

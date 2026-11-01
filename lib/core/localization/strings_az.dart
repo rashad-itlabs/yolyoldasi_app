@@ -659,4 +659,25 @@ const Map<String, String> kStringsAz = {
   'countryCodeTitle': 'Ölkə kodu',
   'countrySearchHint': 'Ölkə və ya kod axtar',
   'countryNotFound': 'Belə ölkə tapılmadı',
+
+  // PRO tier for drivers
+  'proTagline': 'Elanların daha çox sərnişinə çatsın',
+  'proBoostTitle': 'Axtarışda ilk sırada',
+  'proBoostBody':
+      'Bütün elanların axtarış nəticələrinin ən başında görünür — sərnişin səni birinci görür.',
+  'proBadgeTitle': 'Qızılı PRO nişanı',
+  'proBadgeBody':
+      'Adının yanında PRO nişanı: elanlarında, səfər səhifəsində və profilində. Sərnişin üçün etibar siqnalıdır.',
+  'proPreviewCaption': 'Sərnişinlər səni belə görəcək',
+  'proTrialNote': 'Ödəniş tələb olunmur. Müddət bitəndə PRO öz-özünə dayanır.',
+  'proActiveTitle': 'PRO aktivdir',
+  'proExpiredTitle': 'Pulsuz sınaq bitib',
+  'proExpiredBody':
+      'Ödənişli PRO tezliklə gəlir. Hazır olanda xəbər verəcəyik.',
+  'proLockedBody':
+      'PRO sənədləri təsdiqlənmiş sürücülər üçündür. Sənədlərin təsdiqlənəndə sınağı başlada bilərsən.',
+  'proToDocuments': 'Sənədlərə keç',
+  'proCardTitle': 'PRO ilə önə çıx',
+  'proActivated': 'PRO aktivləşdi! Elanların artıq axtarışda birincidir.',
+  'proBoostedBanner': 'Axtarışda önə çıxarılıb',
 };

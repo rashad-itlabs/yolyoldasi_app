@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../extensions/context_extensions.dart';
@@ -11,6 +13,7 @@ class AppAvatar extends StatelessWidget {
     super.key,
     required this.name,
     this.photoUrl,
+    this.previewBytes,
     this.size = Sizes.avatarMd,
     this.isVerified = false,
     this.onTap,
@@ -19,6 +22,11 @@ class AppAvatar extends StatelessWidget {
 
   final String? name;
   final String? photoUrl;
+
+  /// A local image shown instead of [photoUrl] — the photo still on its way
+  /// to the server.
+  final Uint8List? previewBytes;
+
   final double size;
   final bool isVerified;
   final VoidCallback? onTap;
@@ -56,7 +64,15 @@ class AppAvatar extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: photoUrl == null || photoUrl!.isEmpty
+      child: previewBytes != null
+          ? Image.memory(
+              previewBytes!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+            )
+          : photoUrl == null || photoUrl!.isEmpty
           ? Text(
               context.fmt.initials(name),
               style: context.text.titleMedium?.copyWith(

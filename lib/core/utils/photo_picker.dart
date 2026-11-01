@@ -33,6 +33,8 @@ abstract final class PhotoPicker {
     BuildContext context, {
     bool allowRemove = false,
     VoidCallback? onRemove,
+    // Documents have to stay legible; an avatar asks for less.
+    double maxDimension = 1600,
   }) async {
     final l10n = context.l10n;
 
@@ -78,8 +80,8 @@ abstract final class PhotoPicker {
 
     final file = await _picker.pickImage(
       source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
+      maxWidth: maxDimension,
+      maxHeight: maxDimension,
       imageQuality: 82,
     );
     if (file == null) return null;
