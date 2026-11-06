@@ -320,20 +320,20 @@ class _AccountSection extends StatelessWidget {
       child: ProfileSection(
         title: l10n.account.toUpperCase(),
         children: [
-          ProfileTile(
-            icon: Icons.logout_rounded,
-            label: l10n.logout,
-            onTap: () async {
-              final session = context.read<SessionBloc>();
-              final confirmed = await AppFeedback.confirm(
-                context,
-                title: l10n.logoutConfirm,
-                confirmLabel: l10n.logout,
-                isDestructive: true,
-              );
-              if (confirmed) session.add(const SessionSignOutRequested());
-            },
-          ),
+          // ProfileTile(
+          //   icon: Icons.logout_rounded,
+          //   label: l10n.logout,
+          //   onTap: () async {
+          //     final session = context.read<SessionBloc>();
+          //     final confirmed = await AppFeedback.confirm(
+          //       context,
+          //       title: l10n.logoutConfirm,
+          //       confirmLabel: l10n.logout,
+          //       isDestructive: true,
+          //     );
+          //     if (confirmed) session.add(const SessionSignOutRequested());
+          //   },
+          // ),
           ProfileTile(
             icon: Icons.delete_forever_outlined,
             label: l10n.deleteAccount,

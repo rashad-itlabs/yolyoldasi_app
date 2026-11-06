@@ -783,6 +783,10 @@ class AppStrings {
   String get repeatCreated => _get('repeatCreated');
   String get shareRide => _get('shareRide');
   String get shareRideUnavailable => _get('shareRideUnavailable');
+  String get shareAsImage => _get('shareAsImage');
+  String get shareAsLink => _get('shareAsLink');
+  String get shareImageHint => _get('shareImageHint');
+  String get shareFailed => _get('shareFailed');
   String get referral => _get('referral');
   String get referralTitle => _get('referralTitle');
   String get referralBody => _get('referralBody');

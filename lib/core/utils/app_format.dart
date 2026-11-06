@@ -49,6 +49,10 @@ class AppFormat {
   /// "Sabah, 09:00" — the primary departure line.
   String dayLabelWithTime(DateTime date) => '${dayLabel(date)}, ${time(date)}';
 
+  /// "12 sentyabr, 09:00" — for anything read long after it was written, where
+  /// "Sabah" would quietly become false.
+  String dayMonthWithTime(DateTime date) => '${dayMonth(date)}, ${time(date)}';
+
   /// "Bu gün · 14:30" with a mid-dot, for tighter headers.
   String dayDotTime(DateTime date) => '${dayLabel(date)} · ${time(date)}';
 

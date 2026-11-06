@@ -621,6 +621,11 @@ const Map<String, String> kStringsRu = {
   'repeatCreated': 'Объявление размещено',
   'shareRide': 'Поделиться поездкой',
   'shareRideUnavailable': 'У этой поездки нет ссылки',
+  'shareAsImage': 'Поделиться картинкой',
+  'shareAsLink': 'Поделиться ссылкой',
+  'shareImageHint':
+      'Картинка подходит для Instagram. Текст поездки тоже скопируется — его можно вставить в подпись к посту.',
+  'shareFailed': 'Не удалось поделиться. Повторите попытку.',
   'referral': 'Пригласить друга',
   'referralTitle': 'Приглашайте — ваши поездки будут выше',
   'referralBody':

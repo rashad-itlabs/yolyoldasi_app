@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/services/analytics.dart';
 import '../../../../core/theme/app_dimens.dart';
 import '../../../../core/utils/failure_message.dart';
 import '../../../../core/widgets/app_avatar.dart';
@@ -23,6 +21,7 @@ import '../../../profile/domain/entities/user_enums.dart';
 import '../../domain/entities/ride.dart';
 import '../../domain/repositories/ride_repository.dart';
 import '../bloc/ride_detail/ride_detail_bloc.dart';
+import '../widgets/ride_share_sheet.dart';
 
 /// Everything a passenger needs before committing to a seat.
 class RideDetailPage extends StatelessWidget {
@@ -43,28 +42,6 @@ class RideDetailPage extends StatelessWidget {
 
 class _RideDetailView extends StatelessWidget {
   const _RideDetailView();
-
-  /// Hands the ride to whatever the phone can share with.
-  ///
-  /// The text carries the route, the time and the price so the message reads
-  /// on its own in a group chat — a bare link is scrolled past.
-  Future<void> _shareRide(BuildContext context, Ride ride) async {
-    final l10n = context.l10n;
-    final fmt = context.fmt;
-
-    context.read<Analytics>().log(
-      Ev.rideShared,
-      params: {'ride_id': ride.id, 'is_mine': ride.isMine},
-    );
-
-    final text =
-        '${ride.fromCity.name} → ${ride.toCity.name}\n'
-        '${fmt.dayLabelWithTime(ride.departureAt)} · '
-        '${fmt.price(ride.pricePerSeat)} ${l10n.perSeat}\n'
-        '${ride.shareUrl}';
-
-    await SharePlus.instance.share(ShareParams(text: text));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +75,12 @@ class _RideDetailView extends StatelessWidget {
             // still arranged in WhatsApp and Telegram groups, and until now a
             // driver had nothing to paste into one.
             if (state.ride?.shareUrl != null)
-              IconButton(
-                icon: const Icon(Icons.ios_share_rounded),
-                tooltip: l10n.shareRide,
-                onPressed: () => _shareRide(context, state.ride!),
+              Builder(
+                builder: (button) => IconButton(
+                  icon: const Icon(Icons.ios_share_rounded),
+                  tooltip: l10n.shareRide,
+                  onPressed: () => RideShareSheet.show(button, state.ride!),
+                ),
               ),
             if (state.canEdit)
               IconButton(

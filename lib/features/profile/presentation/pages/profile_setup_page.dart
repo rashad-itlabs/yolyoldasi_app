@@ -60,8 +60,9 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
   void initState() {
     super.initState();
     final state = context.read<ProfileFormBloc>().state;
-    _nameController = TextEditingController(text: state.fullName);
-    _aboutController = TextEditingController(text: state.about);
+    final usersList = context.read<SessionBloc>().state;
+    _nameController = TextEditingController(text: usersList.user?.fullName);
+    _aboutController = TextEditingController(text: usersList.user?.about);
   }
 
   @override

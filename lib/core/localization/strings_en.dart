@@ -621,6 +621,11 @@ const Map<String, String> kStringsEn = {
   'repeatCreated': 'Ride published',
   'shareRide': 'Share this ride',
   'shareRideUnavailable': 'This ride has no share link',
+  'shareAsImage': 'Share as image',
+  'shareAsLink': 'Share as link',
+  'shareImageHint':
+      'The image is made for Instagram. The ride details are copied too, so you can paste them into the caption.',
+  'shareFailed': 'Could not share. Please try again.',
   'referral': 'Invite a friend',
   'referralTitle': 'Invite people, rise in search',
   'referralBody':

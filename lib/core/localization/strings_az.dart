@@ -620,6 +620,11 @@ const Map<String, String> kStringsAz = {
   'repeatCreated': 'Elan verildi',
   'shareRide': 'Səfəri paylaş',
   'shareRideUnavailable': 'Bu səfərin paylaşma linki yoxdur',
+  'shareAsImage': 'Şəkil kimi paylaş',
+  'shareAsLink': 'Link kimi paylaş',
+  'shareImageHint':
+      'Şəkil Instagram üçün uyğundur. Səfərin mətni də kopyalanacaq, onu postun yazısına yapışdıra bilərsən.',
+  'shareFailed': 'Paylaşmaq alınmadı. Yenidən cəhd et.',
   'referral': 'Dostunu dəvət et',
   'referralTitle': 'Dəvət et, elanların yuxarı çıxsın',
   'referralBody':
