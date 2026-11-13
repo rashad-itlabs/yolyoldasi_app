@@ -688,4 +688,18 @@ const Map<String, String> kStringsEn = {
   'proCardTitle': 'Stand out with PRO',
   'proActivated': 'PRO is on! Your rides are now first in search.',
   'proBoostedBanner': 'Boosted in search',
+
+  // calls
+  'callUser': 'Call',
+  'callConnecting': 'Connecting…',
+  'callRinging': 'Calling…',
+  'callEnded': 'Call ended',
+  'callNoAnswer': 'No answer',
+  'callRejected': 'Call declined',
+  'callFailed': "Couldn't connect the call",
+  'callMicrophoneDenied': 'Calls need access to the microphone',
+  'callOpenSettings': 'Open settings',
+  'callMute': 'Mute',
+  'callSpeaker': 'Speaker',
+  'callHangUp': 'End',
 };

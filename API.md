@@ -1269,3 +1269,68 @@ bitirsə; ikisi toplanmır.
 PRO başlayanda, uzadılanda və ya ləğv olunanda sürücünün gələcək `active` və
 `inactive` elanlarının boost-u dərhal yenidən hesablanır. Ləğvdən sonra dəvət
 mükafatı varsa, elanlarda o qalır.
+
+## 26. Səsli zənglər
+
+Tətbiqdaxili səsli zəng Agora ilə gedir: API yalnız zəng sətrini saxlayır və
+kanal token-i verir, səs cihazdan Agora-ya, oradan qarşı cihaza gedir. Hamısı
+`auth:sanctum` arxasındadır.
+
+Status axını: `ringing` → `accepted` | `rejected` | `missed`, `accepted` →
+`ended`. 90 saniyədən çox çalan zəng `missed` sayılır (yeni zəng yaradılanda və
+qəbul cəhdində təmizlənir).
+
+| Metod | Yol | Kim | Qeyd |
+|---|---|---|---|
+| POST | `/calls` | hamı | `{receiver_id}` → 201, `data` = zəng. Özünə zəng 422. Qəbul edənin telefonu çalır: iPhone — VoIP push, Android — OneSignal |
+| GET | `/calls/{id}` | iki tərəf | `data.status` — çalarkən hər iki tərəf bunu soruşur |
+| POST | `/calls/{id}/accept` | qəbul edən | yalnız `ringing`; çoxdan çalırsa `missed` olur və 422 |
+| POST | `/calls/{id}/reject` | qəbul edən | `ringing` → `rejected`; artıq bitibsə 200 |
+| POST | `/calls/{id}/end` | iki tərəf | `accepted` → `ended`; zəng edən çalan zəngi ləğv edə bilər → `missed`; artıq bitibsə 200 |
+| GET | `/calls/{id}/token` | iki tərəf | `{app_id, channel_name, uid, token}`; zəng edən `ringing`-də də, qəbul edən yalnız `accepted`-də |
+| POST | `/me/voip-tokens` | hamı | `{token}` — iPhone-un PushKit token-i (hex). `updateOrCreate`, təkrar göndərmək zərərsizdir |
+
+### Telefon zəngi kimi çalma (iPhone)
+
+`POST /calls` qəbul edənin hər iPhone-una **PushKit VoIP push**-u birbaşa
+APNs-ə göndərir (OneSignal-dan keçmir — onun SDK-sı PushKit token-ini qeyd
+etmir). Tətbiq onu CallKit-ə verir: kilid ekranında, tətbiq bağlı olsa da adi
+telefon zəngi kimi çalır.
+
+Push-un gövdəsi:
+
+```json
+{"type": "incoming_call", "uuid": "<CallKit uuid>", "call_id": 49,
+ "caller_id": 7, "caller_name": "…", "caller_photo": "https://…" }
+```
+
+`uuid` kanal adındakı UUID-dir (`call_<uuid>`).
+
+- Ləğv və bitmə üçün VoIP push **göndərilmir**: Apple hər VoIP push-un CallKit
+  zəngi açmasını tələb edir. Çalan telefon `GET /calls/{id}`-ni 3 saniyədən bir
+  soruşur və status `ringing` olmayanda çalmağı dayandırır; zəng edən də rədd
+  edildiyini buradan bilir.
+- `voip_tokens` sətri onu qeyd edən Sanctum sessiyasına bağlıdır və çıxışda
+  (`POST /auth/logout`, `DELETE /auth/account`) onunla birlikdə silinir —
+  çıxış etmiş hesabın zəngləri telefonda çalmır. Ayrıca silmə endpoint-i yoxdur.
+- APNs mühiti (sandbox/production) ilk uğurlu göndərişdə yazılır; Xcode ilə
+  quraşdırılan build sandbox, TestFlight/App Store production token-i verir.
+- Konfiqurasiya `.env`-də: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_PATH`
+  (serverdəki `.p8` faylı), `APNS_BUNDLE_ID` (defolt `az.yolyoldasi.app`).
+  Yoxdursa zəng yenə yaranır, sadəcə qarşı tərəfdə çalmır.
+
+### Telefon zəngi kimi çalma (Android)
+
+`POST /calls` qəbul edənin **Android** OneSignal abunələrinə (subscription
+id-ləri, alias yox — iPhone-a ikinci dəfə getməsin) yüksək prioritetli push
+göndərir: `data` eyni sahələrlə (`type: "incoming_call"`, `uuid`, `call_id`,
+`caller_*`) və qəbul edənin dilində `text_accept`, `text_decline`,
+`text_calling`, `text_hang_up`. `ttl` 60 saniyə, `collapse_id` = `call-<id>`.
+
+Tətbiqin native OneSignal extension-u (`IncomingCallNotificationExtension`)
+onu göstərmədən tutur — tətbiq bağlı olsa da — və tam ekran gələn zəng açır.
+Başlıq/mətn yalnız extension-u olmayan köhnə versiyalar üçündür.
+
+Android-də ləğv push-la gedir: zəng edən çalan zəngi `POST /calls/{id}/end`
+ilə bağlayanda qəbul edənə `type: "call_cancelled"` push-u gedir və telefon
+dərhal susur.

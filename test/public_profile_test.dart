@@ -206,6 +206,24 @@ void main() {
     expect(find.text('Sürücü rejimi'), findsNothing);
   });
 
+  testWidgets('offers a call to a signed-in viewer, never to a guest', (
+    tester,
+  ) async {
+    adapter
+      ..on('/users/42/reviews', 200, reviews())
+      ..on('/users/42', 200, driver());
+
+    phoneWindow(tester);
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Zəng et'), findsOneWidget);
+
+    // `POST /calls` is behind sign-in; a guest would only ever get a 401.
+    await tester.pumpWidget(wrap(signedIn: false));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Zəng et'), findsNothing);
+  });
+
   testWidgets('puts the reviews in one list rather than behind tabs', (
     tester,
   ) async {

@@ -106,4 +106,17 @@ abstract final class Api {
 
   // ------------------------------------------------------------------ reports
   static const reports = '/reports';
+
+  // -------------------------------------------------------------------- calls
+  /// In-app voice calls over Agora. The API only keeps the call row and mints
+  /// channel tokens; the audio goes device to Agora to device.
+  static const calls = '/calls';
+  static String call(int id) => '/calls/$id';
+  static String callAccept(int id) => '/calls/$id/accept';
+  static String callReject(int id) => '/calls/$id/reject';
+  static String callEnd(int id) => '/calls/$id/end';
+  static String callToken(int id) => '/calls/$id/token';
+
+  /// An iPhone's PushKit token, so an incoming call rings like a phone call.
+  static const meVoipTokens = '/me/voip-tokens';
 }

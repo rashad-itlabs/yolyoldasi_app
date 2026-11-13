@@ -16,6 +16,7 @@ import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../bookings/domain/entities/booking.dart';
 import '../../../bookings/domain/repositories/booking_repository.dart';
 import '../../../bookings/presentation/bloc/bookings_list/bookings_list_bloc.dart';
+import '../../../call/domain/entities/call.dart';
 import '../../../reviews/domain/repositories/review_repository.dart';
 import '../../../reviews/presentation/widgets/review_list.dart';
 import '../../domain/repositories/user_repository.dart';
@@ -93,12 +94,30 @@ class _PublicProfileView extends StatelessWidget {
     return AppScaffold(
       title: l10n.profile,
       actions: [
-        if (myId != null && myId != userId)
+        // Signed in and somebody else: the API answers 401 to a guest and 422
+        // to calling yourself, so neither gets a button that cannot work.
+        if (myId != null && myId != userId) ...[
+          IconButton(
+            icon: const Icon(Icons.call_outlined),
+            tooltip: l10n.callUser,
+            onPressed: () {
+              final user = context.read<PublicProfileBloc>().state.user;
+              context.push(
+                Routes.call(userId),
+                extra: CallPeer(
+                  userId: userId,
+                  name: user?.fullName ?? '',
+                  photoUrl: user?.photoUrl,
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.flag_outlined),
             tooltip: l10n.reportUser,
             onPressed: () => ReportSheet.show(context, targetUserId: userId),
           ),
+        ],
         HGap.sm,
       ],
       body: BlocBuilder<PublicProfileBloc, PublicProfileState>(

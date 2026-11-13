@@ -18,6 +18,7 @@ import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../bookings/presentation/widgets/booking_request_sheet.dart';
 import '../../../profile/domain/entities/user_enums.dart';
+import '../../../profile/domain/entities/vehicle.dart';
 import '../../domain/entities/ride.dart';
 import '../../domain/repositories/ride_repository.dart';
 import '../bloc/ride_detail/ride_detail_bloc.dart';
@@ -287,128 +288,166 @@ class _Body extends StatelessWidget {
         ],
 
         // ------------------------------------------------------------ driver
-        VGap.xxl,
-        SectionHeader(title: l10n.driver),
-        AppCard(
-          onTap: () => context.push(Routes.publicProfile(ride.driver.id)),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  AppAvatar(
-                    name: ride.driver.fullName,
-                    photoUrl: ride.driver.photoUrl,
-                    size: Sizes.avatarLg,
-                    isVerified: ride.driver.hasDriverProfile,
-                  ),
-                  HGap.lg,
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                fmt.shortName(ride.driver.fullName),
-                                style: context.text.titleMedium,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (ride.driver.showsProBadge) ...[
-                              HGap.sm,
-                              const ProBadge(large: true),
-                            ],
-                          ],
-                        ),
-                        VGap.xs,
-                        RatingLabel(
-                          rating: ride.driver.ratingFor(UserMode.driver),
-                          reviewCount: ride.driver.reviewCountFor(
-                            UserMode.driver,
-                          ),
-                        ),
-                        if (ride.driver.tripCountFor(UserMode.driver) > 0) ...[
-                          VGap.xs,
-                          Text(
-                            l10n.tripsCount(
-                              ride.driver.tripCountFor(UserMode.driver),
-                            ),
-                            style: context.text.bodySmall,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: palette.textTertiary,
-                  ),
-                ],
-              ),
-              if (vehicle != null) ...[
-                VGap.lg,
-                Divider(height: 1, color: palette.border),
-                VGap.lg,
+        // On their own ride the driver would only be looking at themselves,
+        // so the card — and the note under it about reaching the driver — is
+        // for everyone else. The car stays: which one this ride is on, with
+        // its plate, is still worth checking.
+        if (ride.isMine) ...[
+          if (vehicle != null) ...[
+            VGap.xxl,
+            SectionHeader(title: l10n.vehicle),
+            AppCard(child: _VehicleDetails(vehicle: vehicle, isOwner: true)),
+          ],
+        ] else ...[
+          VGap.xxl,
+          SectionHeader(title: l10n.driver),
+          AppCard(
+            onTap: () => context.push(Routes.publicProfile(ride.driver.id)),
+            child: Column(
+              children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.directions_car_filled_outlined,
-                      size: 20,
-                      color: palette.textSecondary,
+                    AppAvatar(
+                      name: ride.driver.fullName,
+                      photoUrl: ride.driver.photoUrl,
+                      size: Sizes.avatarLg,
+                      isVerified: ride.driver.hasDriverProfile,
                     ),
-                    HGap.md,
+                    HGap.lg,
                     Expanded(
-                      child: Text(
-                        vehicle.summary,
-                        style: context.text.bodyLarge,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  fmt.shortName(ride.driver.fullName),
+                                  style: context.text.titleMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (ride.driver.showsProBadge) ...[
+                                HGap.sm,
+                                const ProBadge(large: true),
+                              ],
+                            ],
+                          ),
+                          VGap.xs,
+                          RatingLabel(
+                            rating: ride.driver.ratingFor(UserMode.driver),
+                            reviewCount: ride.driver.reviewCountFor(
+                              UserMode.driver,
+                            ),
+                          ),
+                          if (ride.driver.tripCountFor(UserMode.driver) >
+                              0) ...[
+                            VGap.xs,
+                            Text(
+                              l10n.tripsCount(
+                                ride.driver.tripCountFor(UserMode.driver),
+                              ),
+                              style: context.text.bodySmall,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    VehicleColorDot(colorValue: vehicle.color),
-                    // API.md §9: the plate comes back only for the driver
-                    // themselves, so its absence is expected, not a gap.
-                    if (vehicle.plate != null) ...[
-                      HGap.sm,
-                      Text(
-                        vehicle.plate!,
-                        style: context.text.labelMedium?.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                if (ride.isMine && vehicle.plate != null) ...[
-                  VGap.sm,
-                  Text(
-                    l10n.plateVisibleToYou,
-                    style: context.text.labelSmall?.copyWith(
+                    Icon(
+                      Icons.chevron_right_rounded,
                       color: palette.textTertiary,
                     ),
-                  ),
+                  ],
+                ),
+                if (vehicle != null) ...[
+                  VGap.lg,
+                  Divider(height: 1, color: palette.border),
+                  VGap.lg,
+                  _VehicleDetails(vehicle: vehicle),
                 ],
               ],
-            ],
+            ),
           ),
-        ),
 
-        VGap.xl,
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.shield_outlined, size: 15, color: palette.textTertiary),
-            HGap.sm,
-            Expanded(
-              child: Text(
-                l10n.phoneHiddenBody,
-                style: context.text.bodySmall?.copyWith(
-                  color: palette.textTertiary,
+          VGap.xl,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                size: 15,
+                color: palette.textTertiary,
+              ),
+              HGap.sm,
+              Expanded(
+                child: Text(
+                  l10n.phoneHiddenBody,
+                  style: context.text.bodySmall?.copyWith(
+                    color: palette.textTertiary,
+                  ),
                 ),
               ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The car a ride is on: model, colour and — for its own driver — the plate.
+class _VehicleDetails extends StatelessWidget {
+  const _VehicleDetails({required this.vehicle, this.isOwner = false});
+
+  final Vehicle vehicle;
+
+  /// Whether the viewer is the ride's driver, the only person the plate is
+  /// returned to.
+  final bool isOwner;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final plate = vehicle.plate;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.directions_car_filled_outlined,
+              size: 20,
+              color: palette.textSecondary,
             ),
+            HGap.md,
+            Expanded(
+              child: Text(vehicle.summary, style: context.text.bodyLarge),
+            ),
+            VehicleColorDot(colorValue: vehicle.color),
+            // API.md §9: the plate comes back only for the driver themselves,
+            // so its absence is expected, not a gap.
+            if (plate != null) ...[
+              HGap.sm,
+              Text(
+                plate,
+                style: context.text.labelMedium?.copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+            ],
           ],
         ),
+        if (isOwner && plate != null) ...[
+          VGap.sm,
+          Text(
+            context.l10n.plateVisibleToYou,
+            style: context.text.labelSmall?.copyWith(
+              color: palette.textTertiary,
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -50,6 +50,11 @@ abstract final class Routes {
   // Profile / people
   static String publicProfile(int id) => '/user/$id';
   static const publicProfilePath = '/user/:userId';
+
+  /// An outgoing voice call to user [id]. Only opened from inside the app,
+  /// with a `CallPeer` as `extra` — see the route.
+  static String call(int id) => '/call/$id';
+  static const callPath = '/call/:userId';
   static const editProfile = '/profile/edit';
   static const editProfilePath = 'edit';
   static const vehicle = '/profile/vehicle';

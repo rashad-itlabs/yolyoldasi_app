@@ -15,6 +15,7 @@ import '../core/services/push/push_service.dart';
 import '../core/widgets/app_feedback.dart';
 import '../features/app_update/presentation/bloc/app_update/app_update_bloc.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
+import '../features/call/domain/services/system_call_ui.dart';
 import '../features/cities/presentation/bloc/cities_bloc.dart';
 import '../features/profile/domain/entities/user_enums.dart';
 import '../features/profile/domain/repositories/user_repository.dart';
@@ -48,6 +49,7 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
   StreamSubscription<PushMessage>? _tapSubscription;
   StreamSubscription<PushMessage>? _foregroundSubscription;
   StreamSubscription<PushMessage>? _watcherSubscription;
+  StreamSubscription<SystemCallEvent>? _voipSubscription;
 
   /// Set once the channels exist and permission has been settled, so a second
   /// sign-in on the same launch does not prompt again.
@@ -82,6 +84,13 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     // is told otherwise.
     _tokenSubscription = _push.tokenChanges.listen(_registerToken);
 
+    // The same for the token an incoming call rings through.
+    _voipSubscription = _dependencies.systemCallUi.events.listen((event) {
+      if (event case SystemVoipTokenChanged(:final token)) {
+        unawaited(_registerVoipToken(token));
+      }
+    });
+
     // The first event of every session, and the denominator of every funnel
     // number that follows it.
     _dependencies.analytics.log(Ev.appOpen);
@@ -94,6 +103,7 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
     _tapSubscription?.cancel();
     _foregroundSubscription?.cancel();
     _watcherSubscription?.cancel();
+    _voipSubscription?.cancel();
     _watcher.pause();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -246,6 +256,11 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
       _watcher.start(userId: userId);
     }
 
+    // Ahead of the permission check below: PushKit rings the phone whether or
+    // not the user allowed notifications, so a refusal must not cost them
+    // their incoming calls.
+    await _registerVoipToken();
+
     if (!granted) return;
 
     final token = _push.currentToken;
@@ -268,6 +283,17 @@ class _AppStartupState extends State<AppStartup> with WidgetsBindingObserver {
       provider: _push.provider,
       externalId: userId?.toString(),
     );
+  }
+
+  /// `POST /me/voip-tokens` — what lets the server ring this iPhone like a
+  /// phone call. Nothing to do on a phone without CallKit, or signed out: the
+  /// server ties the token to the session, and drops it with that session.
+  Future<void> _registerVoipToken([String? token]) async {
+    if (!mounted) return;
+    if (!context.read<SessionBloc>().state.isSignedIn) return;
+    final voip = token ?? await _dependencies.systemCallUi.voipToken();
+    if (voip == null || !mounted) return;
+    await _dependencies.calls.registerVoipToken(voip);
   }
 
   /// A push that arrived while the app was on screen.

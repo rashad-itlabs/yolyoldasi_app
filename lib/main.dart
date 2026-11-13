@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,8 +27,7 @@ Future<void> main() async {
   // column either way. Read from the platform view because MediaQuery does not
   // exist yet — this runs before the first frame.
   final view = WidgetsBinding.instance.platformDispatcher.views.first;
-  final shortestSide =
-      view.physicalSize.shortestSide / view.devicePixelRatio;
+  final shortestSide = view.physicalSize.shortestSide / view.devicePixelRatio;
 
   if (LayoutSize.fromShortestSide(shortestSide).isCompact) {
     await SystemChrome.setPreferredOrientations([
@@ -48,6 +49,11 @@ Future<void> main() async {
   final dependencies = await AppDependencies.bootstrap(
     preferences: preferences,
   );
+
+  // Before the first frame, and whether or not one is ever drawn: a VoIP push
+  // launches the app in the background to ring, and the call it rings for can
+  // be answered on the lock screen with no widget ever built.
+  unawaited(dependencies.incomingCalls.start());
 
   runApp(YolYoldasiApp(dependencies: dependencies));
 }

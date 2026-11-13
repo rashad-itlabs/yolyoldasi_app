@@ -812,6 +812,20 @@ class AppStrings {
   String get proCardTitle => _get('proCardTitle');
   String get proActivated => _get('proActivated');
   String get proBoostedBanner => _get('proBoostedBanner');
+
+  // ------------------------------------------------------------------- calls
+  String get callUser => _get('callUser');
+  String get callConnecting => _get('callConnecting');
+  String get callRinging => _get('callRinging');
+  String get callEnded => _get('callEnded');
+  String get callNoAnswer => _get('callNoAnswer');
+  String get callRejected => _get('callRejected');
+  String get callFailed => _get('callFailed');
+  String get callMicrophoneDenied => _get('callMicrophoneDenied');
+  String get callOpenSettings => _get('callOpenSettings');
+  String get callMute => _get('callMute');
+  String get callSpeaker => _get('callSpeaker');
+  String get callHangUp => _get('callHangUp');
   String get referralShare => _get('referralShare');
   String get referralShareText => _get('referralShareText');
   String get referralCodeHint => _get('referralCodeHint');

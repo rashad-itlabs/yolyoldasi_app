@@ -13,6 +13,8 @@ import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/bookings/presentation/pages/booking_detail_page.dart';
 import '../../features/bookings/presentation/pages/bookings_page.dart';
 import '../../features/bookings/presentation/pages/ride_bookings_page.dart';
+import '../../features/call/domain/entities/call.dart';
+import '../../features/call/presentation/pages/call_page.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/chat/presentation/pages/conversations_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
@@ -261,6 +263,18 @@ GoRouter buildRouter({
         builder: (_, state) => PublicProfilePage(
           userId: Routes.idOf(state.pathParameters['userId']),
         ),
+      ),
+      GoRoute(
+        path: Routes.callPath,
+        parentNavigatorKey: _rootNavigatorKey,
+        // Opening this screen dials straight away, so it only opens from a
+        // tap inside the app, which passes the peer along. Anything else that
+        // lands here — a notification payload, a typed link — is shown the
+        // person's profile instead, where calling is one deliberate tap.
+        redirect: (_, state) => state.extra is CallPeer
+            ? null
+            : Routes.publicProfile(Routes.idOf(state.pathParameters['userId'])),
+        builder: (_, state) => CallPage(peer: state.extra! as CallPeer),
       ),
       GoRoute(
         path: Routes.writeReviewPath,

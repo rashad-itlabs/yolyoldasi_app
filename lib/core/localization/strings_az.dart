@@ -685,4 +685,18 @@ const Map<String, String> kStringsAz = {
   'proCardTitle': 'PRO ilə önə çıx',
   'proActivated': 'PRO aktivləşdi! Elanların artıq axtarışda birincidir.',
   'proBoostedBanner': 'Axtarışda önə çıxarılıb',
+
+  // calls
+  'callUser': 'Zəng et',
+  'callConnecting': 'Qoşulur…',
+  'callRinging': 'Zəng gedir…',
+  'callEnded': 'Zəng bitdi',
+  'callNoAnswer': 'Cavab vermədi',
+  'callRejected': 'Zəngi rədd etdi',
+  'callFailed': 'Zəng qurulmadı',
+  'callMicrophoneDenied': 'Zəng üçün mikrofon icazəsi lazımdır',
+  'callOpenSettings': 'Ayarları aç',
+  'callMute': 'Səssiz',
+  'callSpeaker': 'Dinamik',
+  'callHangUp': 'Bitir',
 };

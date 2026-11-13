@@ -86,4 +86,10 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+    // IncomingCallNotificationExtension implements OneSignal's extension
+    // interface. The SDK itself ships with onesignal_flutter, which keeps it
+    // to its own module; this only puts the interface on the app's compile
+    // classpath. Keep the version in step with onesignal_flutter's.
+    compileOnly("com.onesignal:core:5.10.2")
 }

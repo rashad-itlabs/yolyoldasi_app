@@ -4,7 +4,7 @@ description: >-
   edir, sərnişinlər marşrut üzrə axtarıb yer bron edir.
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.3+6
+version: 1.0.4+7
 
 environment:
   sdk: ^3.10.4
@@ -61,7 +61,6 @@ dependencies:
 
   share_plus: ^12.0.2
 
-
   package_info_plus: ^9.0.1
   flutter_local_notifications: ^19.4.2
 
@@ -72,6 +71,9 @@ dependencies:
   # id is compiled in, and it is not a secret; the REST API key that can
   # actually send lives in the Laravel `.env`.
   onesignal_flutter: ^5.6.11
+  agora_rtc_engine: ^6.6.4
+  permission_handler: ^12.0.1
+  flutter_callkit_incoming: ^3.1.6
 
   # No Firebase **Auth**. `POST /auth/firebase` needs an ID token this app can
   # no longer produce, so sign-in takes a Sanctum token directly — see
@@ -121,7 +123,6 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

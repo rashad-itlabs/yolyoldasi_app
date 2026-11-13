@@ -687,4 +687,18 @@ const Map<String, String> kStringsRu = {
   'proCardTitle': 'Выходите вперёд с PRO',
   'proActivated': 'PRO включён! Ваши объявления уже первые в поиске.',
   'proBoostedBanner': 'Поднято в поиске',
+
+  // calls
+  'callUser': 'Позвонить',
+  'callConnecting': 'Соединение…',
+  'callRinging': 'Вызов…',
+  'callEnded': 'Звонок завершён',
+  'callNoAnswer': 'Нет ответа',
+  'callRejected': 'Звонок отклонён',
+  'callFailed': 'Не удалось позвонить',
+  'callMicrophoneDenied': 'Для звонка нужен доступ к микрофону',
+  'callOpenSettings': 'Открыть настройки',
+  'callMute': 'Без звука',
+  'callSpeaker': 'Динамик',
+  'callHangUp': 'Завершить',
 };

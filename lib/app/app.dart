@@ -13,6 +13,9 @@ import '../features/app_update/presentation/bloc/app_update/app_update_bloc.dart
 import '../features/auth/presentation/bloc/phone_sign_in/phone_sign_in_bloc.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/bookings/domain/repositories/booking_repository.dart';
+import '../features/call/domain/repositories/call_repository.dart';
+import '../features/call/domain/services/call_audio.dart';
+import '../features/call/presentation/widgets/incoming_call_overlay.dart';
 import '../features/chat/domain/repositories/chat_repository.dart';
 import '../features/cities/domain/repositories/city_repository.dart';
 import '../features/cities/presentation/bloc/cities_bloc.dart';
@@ -64,6 +67,8 @@ class YolYoldasiApp extends StatelessWidget {
           value: dependencies.notifications,
         ),
         RepositoryProvider<ReportRepository>.value(value: dependencies.reports),
+        RepositoryProvider<CallRepository>.value(value: dependencies.calls),
+        RepositoryProvider<CallAudio>.value(value: dependencies.callAudio),
         RepositoryProvider<AppDependencies>.value(value: dependencies),
       ],
       child: MultiBlocProvider(
@@ -86,12 +91,11 @@ class YolYoldasiApp extends StatelessWidget {
           // slow reply must not hold the splash screen hostage — an
           // unanswered check simply leaves the app open.
           BlocProvider<AppUpdateBloc>(
-            create: (_) =>
-                AppUpdateBloc(
-                  updates: dependencies.updates,
-                  settings: dependencies.settings,
-                  installed: dependencies.version,
-                )..add(const AppUpdateChecked()),
+            create: (_) => AppUpdateBloc(
+              updates: dependencies.updates,
+              settings: dependencies.settings,
+              installed: dependencies.version,
+            )..add(const AppUpdateChecked()),
           ),
           BlocProvider<SettingsBloc>(
             create: (_) => SettingsBloc(
@@ -188,7 +192,12 @@ class _AppViewState extends State<_AppView> {
               maxScaleFactor: 1.3,
             ),
           ),
-          child: child ?? const SizedBox.shrink(),
+          // Above the router, so an answered call shows whatever route the
+          // guard is holding the app on.
+          child: IncomingCallOverlay(
+            calls: context.read<AppDependencies>().incomingCalls,
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
 
         if (layout.isCompact) return scaled;
@@ -200,9 +209,7 @@ class _AppViewState extends State<_AppView> {
         final theme = Theme.of(context);
         return Theme(
           data: theme.copyWith(
-            textTheme: theme.textTheme.apply(
-              fontSizeFactor: layout.typeScale,
-            ),
+            textTheme: theme.textTheme.apply(fontSizeFactor: layout.typeScale),
           ),
           child: scaled,
         );

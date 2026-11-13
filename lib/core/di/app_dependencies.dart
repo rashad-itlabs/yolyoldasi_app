@@ -11,6 +11,15 @@ import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/bookings/data/repositories/booking_repository_impl.dart';
 import '../../features/bookings/data/services/booking_api_service.dart';
 import '../../features/bookings/domain/repositories/booking_repository.dart';
+import '../../features/call/data/repositories/call_repository_impl.dart';
+import '../../features/call/data/services/agora_call_service.dart';
+import '../../features/call/data/services/call_api_service.dart';
+import '../../features/call/data/services/callkit_service.dart';
+import '../../features/call/domain/repositories/call_repository.dart';
+import '../../features/call/domain/services/call_audio.dart';
+import '../../features/call/domain/services/system_call_ui.dart';
+import '../../features/call/presentation/bloc/call_bloc.dart';
+import '../../features/call/presentation/incoming/incoming_calls.dart';
 import '../../features/chat/data/repositories/chat_repository_impl.dart';
 import '../../features/chat/data/services/chat_api_service.dart';
 import '../../features/chat/domain/repositories/chat_repository.dart';
@@ -81,6 +90,10 @@ class AppDependencies {
     required this.reviews,
     required this.notifications,
     required this.reports,
+    required this.calls,
+    required this.callAudio,
+    required this.systemCallUi,
+    required this.incomingCalls,
     required this.analytics,
     required this.push,
     required this.localNotifications,
@@ -139,6 +152,18 @@ class AppDependencies {
   final ReviewRepository reviews;
   final NotificationRepository notifications;
   final ReportRepository reports;
+  final CallRepository calls;
+
+  /// The Agora engine behind every call. Built lazily on the first call, so
+  /// holding it here costs nothing for someone who never rings anyone.
+  final CallAudio callAudio;
+
+  /// The phone's own call screen — CallKit on iPhone, nothing elsewhere yet.
+  final SystemCallUi systemCallUi;
+
+  /// Calls ringing on this phone. Started from `main`, because a VoIP push
+  /// can launch the app with no widget ever built.
+  final IncomingCalls incomingCalls;
 
   /// Wires everything up and restores the persisted session.
   ///
@@ -151,6 +176,7 @@ class AppDependencies {
     PushService? push,
     LocalNotifications? localNotifications,
     AppVersionInfo? version,
+    SystemCallUi? systemCallUi,
   }) async {
     final tokens = tokenStorage ?? SecureTokenStorage();
     final client = apiClient ?? ApiClient(tokens: tokens);
@@ -171,6 +197,16 @@ class AppDependencies {
 
     final chat = ChatRepositoryImpl(ChatApiService(client));
     final deepLink = PendingDeepLink();
+
+    final calls = CallRepositoryImpl(CallApiService(client));
+    final callAudio = AgoraCallService();
+    // The same plugin on both phones: CallKit on iPhone, its own full-screen
+    // call UI on Android. A test never has a platform channel to talk to.
+    final system =
+        systemCallUi ??
+        (Platform.isIOS || Platform.isAndroid
+            ? CallKitService()
+            : const InactiveSystemCallUi());
 
     return AppDependencies._(
       apiClient: client,
@@ -202,6 +238,14 @@ class AppDependencies {
       reviews: ReviewRepositoryImpl(ReviewApiService(client)),
       notifications: NotificationRepositoryImpl(NotificationApiService(client)),
       reports: ReportRepositoryImpl(ReportApiService(client)),
+      calls: calls,
+      callAudio: callAudio,
+      systemCallUi: system,
+      incomingCalls: IncomingCalls(
+        calls: calls,
+        system: system,
+        createBloc: () => CallBloc(calls: calls, audio: callAudio),
+      ),
 
       analytics: Analytics(
         client: client,
@@ -241,14 +285,14 @@ class AppDependencies {
   /// ONESIGNAL_APP_ID=` produces a build with no transport, and everything
   /// above this line — channels, permission, routing, the foreground watcher —
   /// still works. It is how the app is exercised without a relay.
-  static PushService _defaultPushService() =>
-      AppConfig.oneSignalAppId.isEmpty
+  static PushService _defaultPushService() => AppConfig.oneSignalAppId.isEmpty
       ? const InactivePushService()
       : OneSignalPushService();
 
   Future<void> dispose() async {
     // First, so the last events still go out over a live client.
     await analytics.dispose();
+    incomingCalls.dispose();
     await foregroundMessages.dispose();
     await push.dispose();
     await apiClient.close();

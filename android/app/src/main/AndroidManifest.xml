@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Taking a photo of a document or an avatar. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- In-app voice calls (Agora): the microphone, switching between earpiece
+         and speaker, and noticing a network change mid-call. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:label="Yol Yoldaşı"
@@ -61,6 +66,13 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="yolyoldasi_default" />
+
+        <!-- Incoming calls: OneSignal hands every push to this class before
+             showing it, app running or not, and it turns a call push into a
+             ringing full-screen call instead of a banner. -->
+        <meta-data
+            android:name="com.onesignal.NotificationServiceExtension"
+            android:value="yolyoldasi.az.IncomingCallNotificationExtension" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

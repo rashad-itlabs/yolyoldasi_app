@@ -148,7 +148,9 @@ class OneSignalPushService implements PushService {
   Future<void> dispose() async {
     if (_initialized) {
       OneSignal.User.pushSubscription.removeObserver(_onSubscriptionChanged);
-      OneSignal.Notifications.removeForegroundWillDisplayListener(_onForeground);
+      OneSignal.Notifications.removeForegroundWillDisplayListener(
+        _onForeground,
+      );
       OneSignal.Notifications.removeClickListener(_onClick);
     }
     await _tokens.close();
@@ -174,8 +176,19 @@ class OneSignalPushService implements PushService {
   void _onForeground(OSNotificationWillDisplayEvent event) {
     event.preventDefault();
     if (_foreground.isClosed) return;
+    // A call rings through the native extension on Android, never as a banner.
+    if (_isCallSignal(event.notification)) return;
     _foreground.add(_toMessage(event.notification));
   }
+
+  /// The Android call pushes (`incoming_call`, `call_cancelled`) that
+  /// `IncomingCallNotificationExtension` turns into a ringing phone. They are
+  /// not notifications, and have no row and no screen to open.
+  static bool _isCallSignal(OSNotification notification) =>
+      switch (notification.additionalData?['type']) {
+        'incoming_call' || 'call_cancelled' => true,
+        _ => false,
+      };
 
   /// A tap, including one on a notification that cold-started the app.
   ///
@@ -184,6 +197,9 @@ class OneSignalPushService implements PushService {
   /// to the gap before [start] runs.
   void _onClick(OSNotificationClickEvent event) {
     if (_taps.isClosed) return;
+    // Only an app build without the extension ever shows one to tap; opening
+    // the app is all it can do.
+    if (_isCallSignal(event.notification)) return;
     _taps.add(_toMessage(event.notification));
   }
 
